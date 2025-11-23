@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Chat — Sign Up</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#071428,#0f1724);
+    font-family:Inter,Arial;color:#fff;padding:16px;
+}
+.card{
+    width:100%;max-width:420px;padding:22px;border-radius:12px;
+    background:rgba(255,255,255,0.03);
+}
+.input{
+    width:100%;padding:12px;border-radius:10px;
+    border:1px solid rgba(255,255,255,0.06);
+    background:transparent;color:#fff;margin-bottom:10px;
+}
+.btn{
+    width:100%;padding:12px;border-radius:10px;border:none;
+    background:#7c3aed;color:#fff;font-weight:600;cursor:pointer;
+}
+.small{color:#9aa8bb;text-align:center;margin-top:10px}
+.link{color:#9bd;cursor:pointer;text-decoration:underline}
+.error{color:#ff6b6b;margin:8px 0;font-size:13px;display:none}
+</style>
+</head>
+
+<body>
+<div class="card">
+  <h1 style="margin:0 0 10px">Create Account</h1>
+  <input id="displayName" class="input" placeholder="Your display name" />
+  <input id="email" class="input" placeholder="Email" type="email" />
+  <input id="password" class="input" placeholder="Password" type="password" />
+  <input id="confirm" class="input" placeholder="Confirm Password" type="password" />
+
+  <div id="error" class="error"></div>
+
+  <button id="btnSignup" class="btn">Sign Up</button>
+
+  <div class="small">Already have an account?  
+     <span class="link" onclick="location.href='index.html'">Log in</span>
+  </div>
+</div>
+
+<!-- Firebase Compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<!-- Firebase Init -->
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
+    authDomain: "gatochat-56ab6.firebaseapp.com",
+    databaseURL: "https://gatochat-56ab6-default-rtdb.firebaseio.com",
+    projectId: "gatochat-56ab6",
+    storageBucket: "gatochat-56ab6.firebasestorage.app",
+    messagingSenderId: "888124564246",
+    appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
+};
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db   = firebase.database();
+</script>
+
+<!-- Signup Logic -->
+<script>
+const errEl = document.getElementById("error");
+
+document.getElementById("btnSignup").addEventListener("click", async () => {
+    errEl.style.display = "none";
+
+    const name  = document.getElementById("displayName").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const pass  = document.getElementById("password").value;
+    const conf  = document.getElementById("confirm").value;
+
+    if (!name || !email || !pass || !conf) {
+        errEl.innerText = "All fields required";
+        errEl.style.display = "block";
+        return;
+    }
+    if (pass !== conf) {
+        errEl.innerText = "Passwords do not match";
+        errEl.style.display = "block";
+        return;
+    }
+
+    try {
+        const res = await auth.createUserWithEmailAndPassword(email, pass);
+        const user = res.user;
+
+        // Update Firebase Auth profile
+        await user.updateProfile({ displayName: name });
+
+        // Save user info in Realtime Database
+        await db.ref("users/" + user.uid).set({
+            name: name,
+            email: email,
+            createdAt: Date.now()
+        });
+
+        // Redirect to members page
+        location.href = "members.html";  
+
+    } catch (e) {
+        errEl.innerText = e.message;
+        errEl.style.display = "block";
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Members — Chat</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226);font-family:Inter,Arial;color:#fff}
+.header{display:flex;justify-content:space-between;align-items:center;padding:18px 16px;background:rgba(255,255,255,0.02);box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.title{font-weight:700}
+.container{padding:16px;max-width:1000px;margin:0 auto}
+.card{background:rgba(255,255,255,0.02);padding:14px;border-radius:12px}
+.search{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff;margin-bottom:12px}
+.list{margin-top:12px;display:grid;gap:8px}
+.user{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);cursor:pointer}
+.avatar{width:44px;height:44px;border-radius:10px;background:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px}
+.name{font-weight:600}
+.status-text{font-size:12px;color:#9aa8bb}
+.status-dot{width:10px;height:10px;border-radius:50%}
+.signout{background:#ef4444;padding:8px 10px;border-radius:8px;color:#fff;border:none;cursor:pointer}
+@media (max-width:600px){.header{flex-direction:column;gap:12px}}
+</style>
+</head>
+
+<body>
+<div class="header">
+  <div class="title">Chat — Members</div>
+  <div>
+    <button id="btnGlobal" class="signout" style="margin-right:8px;background:#06b6d4;color:#012">Global</button>
+    <button id="btnSignOut" class="signout">Sign out</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <input id="search" class="search" placeholder="Search members by name..." />
+    <div class="list" id="membersList"></div>
+  </div>
+</div>
+
+<!-- Firebase Compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script>
+// Firebase config
+const firebaseConfig = {
+    apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
+    authDomain: "gatochat-56ab6.firebaseapp.com",
+    databaseURL: "https://gatochat-56ab6-default-rtdb.firebaseio.com",
+    projectId: "gatochat-56ab6",
+    storageBucket: "gatochat-56ab6.firebasestorage.app",
+    messagingSenderId: "888124564246",
+    appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
+};
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+const search = document.getElementById("search");
+const membersList = document.getElementById("membersList");
+const btnSignOut = document.getElementById("btnSignOut");
+const btnGlobal = document.getElementById("btnGlobal");
+
+// Check auth
+auth.onAuthStateChanged(user => {
+  if (!user) return location.href = "index.html";
+
+  const uid = user.uid;
+
+  // presence system
+  const presenceRef = db.ref("presence/" + uid);
+  const connectedRef = db.ref(".info/connected");
+
+  connectedRef.on("value", snap => {
+    if (snap.val() === true) {
+      presenceRef.set({
+        online: true,
+        lastSeen: Date.now(),
+        name: user.displayName || ""
+      });
+      presenceRef.onDisconnect().set({
+        online: false,
+        lastSeen: Date.now(),
+        name: user.displayName || ""
+      });
+    }
+  });
+
+  // load all users from DB
+  db.ref("users").on("value", snap => {
+    const users = snap.val() || {};
+    renderUsers(users, uid);
+  });
+});
+
+// Render all users
+function renderUsers(users, myUid) {
+  membersList.innerHTML = "";
+
+  Object.keys(users).forEach(uid => {
+    const u = users[uid];
+    const div = document.createElement("div");
+
+    div.className = "user";
+    div.dataset.name = u.name || "Unknown";
+    div.dataset.uid = uid;
+
+    div.innerHTML = `
+      <div class="avatar">
+        ${ u.avatar ? `<img src="${u.avatar}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">`
+                     : (u.name ? u.name[0].toUpperCase() : "?") }
+      </div>
+      <div style="flex:1">
+        <div class="name">${u.name || "Unknown"}</div>
+        <div class="status-text" id="status-${uid}">Offline</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        ${ uid !== myUid ? `<button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 8px;border-radius:8px;color:#012">Chat</button>`
+                           : `<span style="font-size:12px;color:#9aa8bb">You</span>` }
+      </div>
+    `;
+    membersList.appendChild(div);
+  });
+
+  // update presence text
+  db.ref("presence").on("value", snap => {
+    const pres = snap.val() || {};
+    Object.keys(pres).forEach(uid => {
+      const statusEl = document.getElementById("status-" + uid);
+      if(statusEl){
+        statusEl.innerText = pres[uid].online ? "Online" : `Offline (Last seen: ${new Date(pres[uid].lastSeen).toLocaleTimeString()})`;
+      }
+    });
+  });
+
+  // chat buttons
+  [...document.getElementsByClassName("openChat")].forEach(btn => {
+    btn.onclick = () => {
+      const otherUid = btn.dataset.uid;
+      const myId = auth.currentUser.uid;
+      const chatId = makeChatId(myId, otherUid);
+
+      db.ref("chatMembers/" + chatId + "/" + myId).set(true);
+      db.ref("chatMembers/" + chatId + "/" + otherUid).set(true);
+
+      location.href = `chat.html?chatId=${chatId}&other=${otherUid}`;
+    };
+  });
+}
+
+// utility to create unique chat ID
+function makeChatId(a,b){
+  return [a,b].sort().join("_");
+}
+
+// search members
+search.addEventListener("input", () => {
+  const q = search.value.toLowerCase();
+  [...membersList.children].forEach(el => {
+    el.style.display = el.dataset.name.toLowerCase().includes(q) ? "" : "none";
+  });
+});
+
+// buttons
+btnSignOut.onclick = async () => { await auth.signOut(); location.href="index.html"; }
+btnGlobal.onclick = () => { location.href="global.html"; }
+</script>
+</body>
+</html>

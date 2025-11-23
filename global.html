@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Global Chat</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body{margin:0;background:#0a1220;color:#fff;font-family:Inter;display:flex;flex-direction:column;height:100dvh}
+.header{padding:16px;background:rgba(255,255,255,0.03);font-weight:700;display:flex;align-items:center;gap:16px}
+.back{cursor:pointer;color:#9bd;background:none;border:none}
+.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:75%;padding:12px;border-radius:12px;background:rgba(255,255,255,0.05)}
+.me{background:linear-gradient(90deg,#4f46e5,#06b6d4)}
+.compose{display:flex;padding:12px;gap:8px;background:rgba(255,255,255,0.03)}
+.input{flex:1;padding:10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:white}
+.send{padding:10px 16px;border-radius:8px;background:#7c3aed;border:none;color:white;cursor:pointer}
+.meta{font-size:12px;color:#9aa8bb;margin-bottom:4px}
+</style>
+</head>
+
+<body>
+<div class="header">
+  <button class="back" onclick="location.href='members.html'">←</button>
+  Global Chat
+</div>
+
+<div id="messages" class="messages"></div>
+
+<div class="compose">
+  <input id="text" class="input" placeholder="Type message...">
+  <button id="btnSend" class="send">Send</button>
+</div>
+
+<!-- Firebase compat scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script>
+// CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
+  authDomain:"gatochat-56ab6.firebaseapp.com",
+  databaseURL:"https://gatochat-56ab6-default-rtdb.firebaseio.com",
+  projectId:"gatochat-56ab6",
+  storageBucket:"gatochat-56ab6.firebasestorage.app",
+  messagingSenderId:"888124564246",
+  appId:"1:888124564246:web:33a41ee68eec0f6b9c2637"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+auth.onAuthStateChanged(user=>{
+  if(!user) return location.href='login.html';
+  initGlobal(user);
+});
+
+function initGlobal(user){
+  const msgEl = document.getElementById("messages");
+
+  // Load old
+  db.ref("global/messages").limitToLast(50).once("value").then(snap=>{
+    snap.forEach(child=>{
+      renderMessage(child.val(), user.uid);
+    });
+    msgEl.scrollTop = msgEl.scrollHeight;
+  });
+
+  // Live
+  db.ref("global/messages").limitToLast(1).on("child_added", snap=>{
+    renderMessage(snap.val(), user.uid);
+    msgEl.scrollTop = msgEl.scrollHeight;
+  });
+
+  document.getElementById("btnSend").onclick = () =>{
+    send(user);
+  };
+}
+
+function send(user){
+  const text = document.getElementById("text").value.trim();
+  if(!text) return;
+
+  const msg = {
+    uid: user.uid,
+    name: user.displayName || "User",
+    text: text,
+    time: Date.now()
+  };
+
+  db.ref("global/messages").push(msg);
+  document.getElementById("text").value = "";
+}
+
+function renderMessage(m,my){
+  const div = document.createElement("div");
+  div.className = "msg "+(m.uid===my?"me":"");
+
+  div.innerHTML =
+    `<div class="meta">${m.name} — ${new Date(m.time).toLocaleTimeString()}</div>
+     <div>${escape(m.text)}</div>`;
+
+  document.getElementById("messages").appendChild(div);
+}
+
+function escape(t){
+  return t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+}
+</script>
+</body>
+</html>
+

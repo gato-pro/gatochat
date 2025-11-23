@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Chat App</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg,#071428,#0f1724);
+  font-family: Inter, Arial, sans-serif;
+  color: #fff;
+  padding: 16px;
+  text-align: center;
+}
+h1 { margin-bottom: 24px; }
+a.button {
+  display: inline-block;
+  margin: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.2s;
+}
+a.button:hover { background: #5b21b6; }
+</style>
+</head>
+<body>
+<h1>Welcome to Chat App</h1>
+<a href="login.html" class="button" id="loginBtn">Log In</a>
+<a href="signup.html" class="button" id="signupBtn">Sign Up</a>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+<script>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
+  authDomain: "gatochat-56ab6.firebaseapp.com",
+  databaseURL: "https://gatochat-56ab6-default-rtdb.firebaseio.com",
+  projectId: "gatochat-56ab6",
+  storageBucket: "gatochat-56ab6.firebasestorage.app",
+  messagingSenderId: "888124564246",
+  appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// Check if user is already signed in
+auth.onAuthStateChanged(user => {
+  if (user) {
+    // User is signed in, redirect to members page
+    location.href = "members.html";
+  }
+});
+</script>
+</body>
+</html>
