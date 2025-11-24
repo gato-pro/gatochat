@@ -15,13 +15,18 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226
 .card{background:rgba(255,255,255,0.02);padding:14px;border-radius:12px}
 .search{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff;margin-bottom:12px}
 .list{margin-top:12px;display:grid;gap:8px}
-.user{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);cursor:pointer}
+.user{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);cursor:pointer;position:relative}
 .avatar{width:44px;height:44px;border-radius:10px;background:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px}
 .name{font-weight:600}
 .status-text{font-size:12px;color:#9aa8bb}
 .status-dot{width:10px;height:10px;border-radius:50%}
 .signout{background:#ef4444;padding:8px 10px;border-radius:8px;color:#fff;border:none;cursor:pointer}
-@media (max-width:600px){.header{flex-direction:column;gap:12px}}
+.meta-time{font-size:11px;color:#9aa8bb;white-space:nowrap}
+.preview{font-size:13px;color:#cfd8e3;opacity:0.95;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview.you{color:#a6d8ff}
+.preview.deleted{color:#a7a7a7;font-style:italic}
+.preview-type{margin-right:6px}
+@media (max-width:600px){.header{flex-direction:column;gap:12px}.preview{max-width:160px}}
 </style>
 </head>
 
@@ -67,16 +72,18 @@ const membersList = document.getElementById("membersList");
 const btnSignOut = document.getElementById("btnSignOut");
 const btnGlobal = document.getElementById("btnGlobal");
 
+// Keep a map of userId -> element and lastMessageTimestamp
+const userMap = new Map(); // uid => { el, lastTime, listeners: [] }
+let currentUid = null;
+
 // Check auth
 auth.onAuthStateChanged(user => {
   if (!user) return location.href = "index.html";
+  currentUid = user.uid;
 
-  const uid = user.uid;
-
-  // presence system
-  const presenceRef = db.ref("presence/" + uid);
+  // presence system for this user
+  const presenceRef = db.ref("presence/" + currentUid);
   const connectedRef = db.ref(".info/connected");
-
   connectedRef.on("value", snap => {
     if (snap.val() === true) {
       presenceRef.set({
@@ -95,51 +102,232 @@ auth.onAuthStateChanged(user => {
   // load all users from DB
   db.ref("users").on("value", snap => {
     const users = snap.val() || {};
-    renderUsers(users, uid);
+    renderUsers(users, currentUid);
   });
 });
 
-// Render all users
+// Render users (create DOM entries)
 function renderUsers(users, myUid) {
-  membersList.innerHTML = "";
+  // Clean up existing listeners for removed users
+  // We'll keep listeners for active users but remove listeners for users not present
+  const existingUids = new Set(Object.keys(users));
 
+  // remove DOM for users that no longer exist
+  for (const [uid, entry] of userMap.entries()) {
+    if (!existingUids.has(uid)) {
+      // remove listeners
+      if (entry.listeners) entry.listeners.forEach(fn => fn.off && fn.off());
+      if (entry.el && entry.el.parentNode) entry.el.remove();
+      userMap.delete(uid);
+    }
+  }
+
+  // Render / update all users
   Object.keys(users).forEach(uid => {
     const u = users[uid];
-    const div = document.createElement("div");
 
+    if (userMap.has(uid)) {
+      // update name/avatar if changed
+      const rec = userMap.get(uid);
+      rec.el.querySelector(".name").textContent = u.name || "Unknown";
+      if (u.avatar) {
+        rec.el.querySelector(".avatar").innerHTML = `<img src="${u.avatar}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">`;
+      } else {
+        rec.el.querySelector(".avatar").textContent = u.name ? u.name[0].toUpperCase() : "?";
+      }
+      return;
+    }
+
+    // Create element
+    const div = document.createElement("div");
     div.className = "user";
     div.dataset.name = u.name || "Unknown";
     div.dataset.uid = uid;
 
     div.innerHTML = `
-      <div class="avatar">
-        ${ u.avatar ? `<img src="${u.avatar}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">`
-                     : (u.name ? u.name[0].toUpperCase() : "?") }
-      </div>
-      <div style="flex:1">
-        <div class="name">${u.name || "Unknown"}</div>
-        <div class="status-text" id="status-${uid}">Offline</div>
+      <div class="avatar">${ u.avatar ? `<img src="${u.avatar}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">` : (u.name ? u.name[0].toUpperCase() : "?") }</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="name">${u.name || "Unknown"}</div>
+          <div class="meta-time" id="time-${uid}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div class="preview" id="preview-${uid}">No messages yet</div>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        ${ uid !== myUid ? `<button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 8px;border-radius:8px;color:#012">Chat</button>`
-                           : `<span style="font-size:12px;color:#9aa8bb">You</span>` }
+        ${ uid !== myUid ? `<button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 8px;border-radius:8px;color:#012">Chat</button>` : `<span style="font-size:12px;color:#9aa8bb">You</span>` }
       </div>
     `;
+
+    // Append to list
     membersList.appendChild(div);
+
+    // Save in map
+    userMap.set(uid, { el: div, lastTime: 0, listeners: [] });
+
+    // Add click handler for the entire card (optional: also clicking avatar/name opens chat)
+    div.addEventListener('click', (ev) => {
+      // avoid firing when clicking the chat button itself
+      if (ev.target && (ev.target.classList.contains('openChat') || ev.target.closest('.openChat'))) return;
+      if (uid === myUid) return;
+      openChatWith(uid);
+    });
   });
 
-  // update presence text
+  // Update presence text
   db.ref("presence").on("value", snap => {
     const pres = snap.val() || {};
     Object.keys(pres).forEach(uid => {
-      const statusEl = document.getElementById("status-" + uid);
-      if(statusEl){
-        statusEl.innerText = pres[uid].online ? "Online" : `Offline (Last seen: ${new Date(pres[uid].lastSeen).toLocaleTimeString()})`;
+      const timeEl = document.getElementById("time-" + uid);
+      const previewEl = document.getElementById("preview-" + uid);
+      if (timeEl && pres[uid]) {
+        if (pres[uid].online) {
+          timeEl.textContent = "Online";
+          if (previewEl) previewEl.textContent = previewEl.dataset && previewEl.dataset.raw ? previewEl.dataset.raw : previewEl.textContent;
+        } else {
+          const t = new Date(pres[uid].lastSeen || Date.now()).toLocaleTimeString();
+          // keep time displayed in time element only if there's no recent message time
+          // (we'll overwrite when latest message arrives)
+          if (!userMap.has(uid) || (userMap.get(uid) && (!userMap.get(uid).lastTime || userMap.get(uid).lastTime === 0))) {
+            timeEl.textContent = `Last seen ${t}`;
+          }
+        }
       }
     });
   });
 
-  // chat buttons
+  // For each user, attach listeners to their chat message node to fetch last message and subscribe
+  for (const [uid, rec] of userMap.entries()) {
+    // Skip listening to itself
+    if (uid === currentUid) continue;
+
+    // set up listeners only once
+    if (rec._listenersAttached) continue;
+    rec._listenersAttached = true;
+
+    const chatId = makeChatId(currentUid, uid);
+
+    // helper to update preview and time and reorder
+    const handleNewLastMsg = (msgObj) => {
+      if (!msgObj) {
+        // no messages yet
+        const previewEl = document.getElementById("preview-" + uid);
+        const timeEl = document.getElementById("time-" + uid);
+        if (previewEl) {
+          previewEl.textContent = "No messages yet";
+          previewEl.dataset.raw = "No messages yet";
+        }
+        if (timeEl && (!rec.lastTime || rec.lastTime === 0)) {
+          timeEl.textContent = "";
+        }
+        rec.lastTime = 0;
+        return;
+      }
+
+      // msgObj structure: { id, text, uid/name, time, type?, reply? }
+      const previewEl = document.getElementById("preview-" + uid);
+      const timeEl = document.getElementById("time-" + uid);
+      if (!previewEl || !timeEl) return;
+
+      // choose preview text based on type and deleted
+      let previewText = "";
+      if (msgObj.deleted || msgObj.type === 'deleted') {
+        previewText = "Message deleted";
+        previewEl.classList.add('preview', 'deleted');
+      } else if (msgObj.type && msgObj.type !== 'text') {
+        // show type icons
+        const t = msgObj.type;
+        if (t === 'image' || t === 'photo') previewText = "📷 Photo";
+        else if (t === 'voice' || t === 'audio') previewText = "🎤 Voice message";
+        else if (t === 'sticker') previewText = "Sticker";
+        else previewText = t;
+        previewEl.classList.remove('you');
+        previewEl.classList.remove('deleted');
+      } else if (msgObj.reply && msgObj.reply.text) {
+        // show reply small preview
+        const rName = msgObj.reply.name || (msgObj.reply.sender === currentUid ? 'You' : 'User');
+        previewText = `${rName}: ${msgObj.reply.text}`;
+        previewEl.classList.remove('deleted');
+      } else {
+        // normal text
+        const who = (msgObj.uid === currentUid) ? "You: " : "";
+        previewText = who + (msgObj.text || '');
+        if (who) previewEl.classList.add('you'); else previewEl.classList.remove('you');
+        previewEl.classList.remove('deleted');
+      }
+
+      // truncate preview to a reasonable length
+      const truncated = previewText.length > 60 ? previewText.slice(0,57) + '...' : previewText;
+      previewEl.textContent = truncated;
+      previewEl.dataset.raw = previewText;
+
+      // time
+      const timeStr = msgObj.time ? new Date(msgObj.time).toLocaleTimeString() : '';
+      timeEl.textContent = timeStr;
+
+      // remember lastTime
+      rec.lastTime = msgObj.time || 0;
+
+      // reorder this user's card to top
+      const node = rec.el;
+      if (node && node.parentNode) {
+        node.parentNode.prepend(node);
+      }
+    };
+
+    // Use two possible paths to be safe: privateChates (your mention) and privateChats
+    // We'll query both and use the message with the largest time. Also subscribe to child_added to update live.
+
+    const pathCandidates = [
+      `privateChates/${chatId}/messages`,
+      `privateChats/${chatId}/messages`
+    ];
+
+    // initial fetch of last message (check both)
+    (async () => {
+      try {
+        let bestMsg = null;
+        for (const p of pathCandidates) {
+          const snap = await db.ref(p).orderByChild('time').limitToLast(1).once('value');
+          snap.forEach(ch => {
+            const obj = ch.val();
+            obj.id = ch.key;
+            // prefer highest time
+            if (!bestMsg || (obj.time || 0) > (bestMsg.time || 0)) bestMsg = obj;
+          });
+        }
+        handleNewLastMsg(bestMsg);
+      } catch (err) {
+        console.warn("Error fetching last message for", chatId, err);
+      }
+    })();
+
+    // subscribe for live additions on both paths
+    for (const p of pathCandidates) {
+      try {
+        const ref = db.ref(p);
+        // child_added for new messages
+        const onChildAdded = ref.orderByChild('time').limitToLast(1).on('child_added', snap => {
+          const obj = snap.val();
+          obj.id = snap.key;
+          // we may get many updates from both paths; pick whichever has newer time
+          // convert current known lastTime
+          const prev = rec.lastTime || 0;
+          const gotTime = obj.time || 0;
+          if (gotTime >= prev) {
+            handleNewLastMsg(obj);
+          }
+        });
+        // push listener so we can turn it off later if needed
+        rec.listeners.push(ref);
+      } catch (err) {
+        console.warn("subscribe error", p, err);
+      }
+    }
+  }
+
+  // add chat button handlers (re-register)
   [...document.getElementsByClassName("openChat")].forEach(btn => {
     btn.onclick = () => {
       const otherUid = btn.dataset.uid;
@@ -152,6 +340,9 @@ function renderUsers(users, myUid) {
       location.href = `chat.html?chatId=${chatId}&other=${otherUid}`;
     };
   });
+
+  // Keep search filtering working
+  search.dispatchEvent(new Event('input'));
 }
 
 // utility to create unique chat ID
@@ -170,6 +361,7 @@ search.addEventListener("input", () => {
 // buttons
 btnSignOut.onclick = async () => { await auth.signOut(); location.href="index.html"; }
 btnGlobal.onclick = () => { location.href="global.html"; }
+
 </script>
 </body>
 </html>
