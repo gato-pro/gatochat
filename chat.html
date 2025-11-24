@@ -1,26 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Private chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#041022);color:#fff;font-family:Inter}
-.header{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,0.02)}
-.back{background:transparent;border:none;color:#9bd;cursor:pointer}
-.container{display:flex;flex-direction:column;height:calc(100dvh - 64px)}
-.messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
-.msg{max-width:75%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.04)}
-.msg.me{align-self:flex-end;background:linear-gradient(90deg,#4f46e5,#06b6d4);color:#fff}
-.compose{display:flex;padding:12px;gap:8px;background:rgba(0,0,0,0.04)}
-.input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff}
-.send{padding:10px 14px;border-radius:10px;border:none;background:#7c3aed;color:#fff;cursor:pointer}
-.meta{font-size:12px;color:#9aa8bb;margin-bottom:6px}
-@media (max-width:600px){.msg{max-width:90%}}
+  :root { --bg1:#071428; --bg2:#041022; --muted:#9aa8bb; }
+  body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#fff;font-family:Inter}
+  .header{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,0.02)}
+  .back{background:transparent;border:none;color:#9bd;cursor:pointer}
+  .container{display:flex;flex-direction:column;height:calc(100dvh - 64px)}
+  .messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:75%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);position:relative}
+  .msg.me{align-self:flex-end;background:linear-gradient(90deg,#090909,#070707);color:#fff}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .compose{display:flex;padding:12px;gap:8px;background:rgba(0,0,0,0.04)}
+  .input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255, 255, 255, 0.593);background:transparent;color:#fff;min-height:42px}
+  .send{padding: bottom 0px;border-radius:10px;border:none;background:transparent;color:#fff;cursor:pointer}
+
+  /* --- Reply preview above textbox --- */
+  .replyBar {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    border-left:4px solid #4f46e5;
+    padding:6px 10px;
+    margin:0 12px;
+    margin-bottom:4px;
+    background:rgba(255,255,255,0.05);
+    border-radius:8px;
+  }
+  .replyBarText { flex:1; font-size:14px; color:#d1d5db; }
+  .cancelReplyBtn { cursor:pointer; padding:6px 10px; color:#ff6b6b; }
+
+  /* --- Reply bubble inside chat --- */
+  .replyBubble {
+    border-left:4px solid rgba(255,255,255,0.4);
+    padding-left:6px;
+    margin-bottom:6px;
+    opacity:0.85;
+    font-size:13px;
+  }
+
+  /* Context menu */
+  .ctxMenu {
+    position:fixed;
+    z-index:9999;
+    background:rgba(20,20,30,0.98);
+    border:1px solid rgba(255,255,255,0.04);
+    padding:6px;
+    border-radius:8px;
+    box-shadow:0 6px 30px rgba(0,0,0,0.6);
+    display:flex;
+    gap:8px;
+    min-width:120px;
+  }
+  .ctxBtn {
+    padding:8px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+    color:#fff;
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .ctxBtn.delete { color:#ff6b6b; border-color:rgba(255,107,107,0.08);}
+  .ctxBtn.cancel { color:#9aa8bb; border-color:rgba(255,255,255,0.02);}
+  .ctxBtn.reply { color:#22c55e; border-color:rgba(34,197,94,0.1); }
+
+  .msg.longpressing { outline:2px solid rgba(255,255,255,0.06); transform:scale(0.995); }
+
 </style>
 </head>
 <body>
+
+<div id="replyPreviewHolder"></div>
 
 <div class="header">
   <button class="back" onclick="location.href='members.html'">←</button>
@@ -33,125 +89,279 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#041022
 <div class="container">
   <div class="messages" id="messages"></div>
 
+  <!-- Reply preview inserts ABOVE this -->
   <div class="compose">
-    <input id="text" class="input" placeholder="Type a message..." />
-    <button id="btnSend" class="send">Send</button>
+    <textarea id="text" class="input" placeholder="Type a message..." rows="1"></textarea>
+    <button id="btnSend" class="send">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.61109 12.4L10.8183 18.5355C11.0462 19.6939 12.6026 19.9244 13.1565 18.8818L19.0211 7.84263C19.248 7.41555 19.2006 6.94354 18.9737 6.58417M9.61109 12.4L5.22642 8.15534C4.41653 7.37131 4.97155 6 6.09877 6H17.9135C18.3758 6 18.7568 6.24061 18.9737 6.58417M9.61109 12.4L18.9737 6.58417M19.0555 6.53333L18.9737 6.58417" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+  </svg>
+    </button>
   </div>
 </div>
 
-<!-- Firebase COMPAT SDKs -->
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script>
-/* ---------------------- FIXED FIREBASE CONFIG ---------------------- */
+
+/* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
   authDomain: "gatochat-56ab6.firebaseapp.com",
+  databaseURL: "https://gatochat-56ab6-default-rtdb.firebaseio.com",
   projectId: "gatochat-56ab6",
   storageBucket: "gatochat-56ab6.firebasestorage.app",
   messagingSenderId: "888124564246",
-  appId: "1:888124564246:web:33a41ee68eec0f6b9c2637",
-
-  /* THIS WAS MISSING / REQUIRED FOR MESSAGES */
-  databaseURL: "https://gatochat-56ab6-default-rtdb.firebaseio.com"
+  appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
 };
-/*--------------------------------------------------------------------*/
 
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* ---------------- URL PARAMS ---------------- */
-function qs(n){ return new URLSearchParams(location.search).get(n); }
-const chatId = qs('chatId');
-const other = qs('other');
-if(!chatId || !other) location.href='members.html';
+/* URL reading */
+function qs(x){ return new URLSearchParams(location.search).get(x);}
+const chatId = qs("chatId");
+const other = qs("other");
 
-/* ---------------- MAIN ---------------- */
-auth.onAuthStateChanged(u => {
-  if(!u) location.href='login.html';
+let replyTarget = null;  // stores {id, sender, text}
+
+/* ================= INIT CHAT ================= */
+auth.onAuthStateChanged(u=>{
+  if(!u) location.href="login.html";
   else initChat(u);
 });
 
-async function initChat(user){
-  const messagesEl = document.getElementById('messages');
-  const otherNameEl = document.getElementById('otherName');
-  const otherStatusEl = document.getElementById('otherStatus');
+function initChat(user){
+  const messagesEl = document.getElementById("messages");
+  const nameEl = document.getElementById("otherName");
+  const statusEl = document.getElementById("otherStatus");
 
-  /* -------- LOAD OTHER USER NAME -------- */
-  const otherSnap = await db.ref('users/'+other).once('value');
-  const otherData = otherSnap.val() || {};
-  otherNameEl.innerText = otherData.name || "User";
-
-  /* -------- LIVE PRESENCE ---------- */
-  db.ref('presence/'+other).on('value', snap => {
-    const p = snap.val();
-    if(p && p.online) otherStatusEl.innerText = "Online";
-    else otherStatusEl.innerText = "Last seen: " + (p ? new Date(p.lastSeen).toLocaleString() : "Unknown");
+  /* Load other user name */
+  db.ref("users/"+other).once("value").then(s=>{
+    nameEl.innerText = (s.val() && s.val().name) || "User";
   });
 
-  /* -------- LOAD OLD MESSAGES FIRST -------- */
+  /* Presence */
+  db.ref("presence/"+other).on("value", snap=>{
+    const p = snap.val();
+    statusEl.innerText = p?.online
+      ? "Online"
+      : "Last seen: " + new Date(p?.lastSeen || Date.now()).toLocaleString();
+  });
+
+  const rendered = new Set();
+
+  /* Initial load */
   db.ref(`privateChats/${chatId}/messages`)
     .orderByChild("time")
-    .once("value", snap => {
-      messagesEl.innerHTML = "";
-      snap.forEach(c => renderMsg(c.val(), user.uid));
-      autoScroll();
+    .once("value", snap=>{
+      messagesEl.innerHTML="";
+      rendered.clear();
+      snap.forEach(c=>{
+        const d=c.val(); d.id=c.key;
+        renderMsg(d,user.uid);
+        rendered.add(d.id);
+      });
+      scrollToBottom();
     });
 
-  /* -------- REALTIME NEW MESSAGES -------- */
+  /* Live new messages */
   db.ref(`privateChats/${chatId}/messages`)
     .orderByChild("time")
-    .on("child_added", snap => {
-      renderMsg(snap.val(), user.uid);
-      autoScroll();
+    .on("child_added", snap=>{
+      const d=snap.val(); d.id=snap.key;
+      if(!rendered.has(d.id)){
+        renderMsg(d,user.uid);
+        rendered.add(d.id);
+        scrollToBottom();
+      }
     });
 
-  /* -------- SEND MESSAGE -------- */
-  document.getElementById('btnSend').onclick = async () => {
-    const text = document.getElementById('text').value.trim();
-    if(!text) return;
-
-    await db.ref(`privateChats/${chatId}/messages`).push({
-      sender: user.uid,
-      text,
-      time: Date.now()
+  /* Deleted messages */
+  db.ref(`privateChats/${chatId}/messages`)
+    .on("child_removed", snap=>{
+      const el=document.querySelector(`[data-msgid="${snap.key}"]`);
+      if(el){
+        el.innerHTML =
+        `<div style="font-size:12px;color:#9aa8bb;">Message deleted</div>`;
+      }
     });
 
-    document.getElementById('text').value = "";
+  /* SEND */
+  document.getElementById("btnSend").onclick = ()=>sendMessage(user);
+  const input=document.getElementById("text");
+  input.onkeydown=(e)=>{
+    if(e.key==="Enter" && !e.shiftKey){
+      e.preventDefault();
+      sendMessage(user);
+    }
   };
 }
 
-/* ---------------- RENDER MESSAGE ---------------- */
-function renderMsg(m, myUid){
-  const box = document.createElement("div");
-  box.className = "msg"+(m.sender===myUid?" me":"");
+/* ================= SEND MESSAGE (with reply) ================= */
+function sendMessage(user){
+  const text = document.getElementById("text").value.trim();
+  if(!text) return;
+
+  const newMsg = {
+    sender: user.uid,
+    text,
+    time: Date.now()
+  };
+
+  if(replyTarget){
+    newMsg.reply = {
+      id: replyTarget.id,
+      sender: replyTarget.sender,
+      text: replyTarget.text
+    };
+  }
+
+  db.ref(`privateChats/${chatId}/messages`).push(newMsg);
+
+  document.getElementById("text").value = "";
+  hideReplyPreview();
+}
+
+/* ================= RENDER MESSAGE ================= */
+function renderMsg(m,my){
+  const box=document.createElement("div");
+  box.className="msg"+(m.sender===my?" me":"");
+  box.dataset.msgid=m.id;
+
+  let replyHtml = "";
+
+  if(m.reply){
+    replyHtml = `
+      <div class="replyBubble">
+        <div style="font-weight:600;">${m.reply.sender===my?"You":"User"}</div>
+        <div style="opacity:0.8;">${escapeHtml(m.reply.text)}</div>
+      </div>
+    `;
+  }
 
   box.innerHTML = `
-    <div class="meta">
-      ${m.sender===myUid?"You":""} • ${new Date(m.time).toLocaleTimeString()}
-    </div>
+    <div class="meta">${m.sender===my?"You":"User"} • ${new Date(m.time).toLocaleTimeString()}</div>
+    ${replyHtml}
     <div>${escapeHtml(m.text)}</div>
   `;
+
+  enableMessageContext(box,m);
 
   document.getElementById("messages").appendChild(box);
 }
 
-function autoScroll(){
-  const el = document.getElementById("messages");
-  el.scrollTop = el.scrollHeight;
+/* ================= LONG PRESS + MENU ================= */
+function enableMessageContext(el,msg){
+  let timer=null;
+
+  el.addEventListener("contextmenu",e=>{
+    e.preventDefault();
+    showMenu(e.clientX,e.clientY,msg);
+  });
+
+  el.addEventListener("touchstart",e=>{
+    const t=e.touches[0];
+    timer=setTimeout(()=>showMenu(t.clientX,t.clientY,msg),600);
+  });
+
+  ["touchend","touchmove","touchcancel"].forEach(ev=>{
+    el.addEventListener(ev,()=>clearTimeout(timer));
+  });
 }
 
-/* Escape HTML */
-function escapeHtml(s){
-  return s.replace(/[&<>"']/g, c=>(
-    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
-  ));
+let activeMenu=null;
+
+function showMenu(x,y,msg){
+  hideMenu();
+
+  const menu=document.createElement("div");
+  menu.className="ctxMenu";
+  menu.style.left=x+"px";
+  menu.style.top=y+"px";
+
+  /* Reply */
+  const btnReply=document.createElement("div");
+  btnReply.className="ctxBtn reply";
+  btnReply.innerText="Reply";
+  btnReply.onclick=()=>{
+    hideMenu();
+    showReplyPreview(msg);
+  };
+
+  /* Delete */
+  const btnDelete=document.createElement("div");
+  btnDelete.className="ctxBtn delete";
+  btnDelete.innerText="Delete";
+  btnDelete.onclick=()=>{
+    hideMenu();
+    if(confirm("Delete this message?")){
+      db.ref(`privateChats/${chatId}/messages/${msg.id}`).remove();
+    }
+  };
+
+  /* Cancel */
+  const btnCancel=document.createElement("div");
+  btnCancel.className="ctxBtn cancel";
+  btnCancel.innerText="Cancel";
+  btnCancel.onclick=hideMenu;
+
+  menu.appendChild(btnReply);
+  menu.appendChild(btnDelete);
+  menu.appendChild(btnCancel);
+
+  document.body.appendChild(menu);
+  activeMenu=menu;
+
+  window.addEventListener("click",hideMenu);
 }
+
+function hideMenu(){
+  if(activeMenu){
+    activeMenu.remove();
+    activeMenu=null;
+    window.removeEventListener("click",hideMenu);
+  }
+}
+
+/* ================= REPLY PREVIEW ================= */
+function showReplyPreview(msg){
+  replyTarget = { id:msg.id, sender:msg.sender, text:msg.text };
+
+  const holder=document.getElementById("replyPreviewHolder");
+  holder.innerHTML=`
+    <div class="replyBar">
+      <div class="replyBarText">
+        <div style="font-weight:600;">Replying to ${msg.sender}</div>
+        <div style="opacity:0.8;">${escapeHtml(msg.text)}</div>
+      </div>
+      <div class="cancelReplyBtn" onclick="hideReplyPreview()">✕</div>
+    </div>
+  `;
+}
+
+function hideReplyPreview(){
+  replyTarget=null;
+  document.getElementById("replyPreviewHolder").innerHTML="";
+}
+
+/* ================= HELPERS ================= */
+function scrollToBottom(){
+  const el=document.getElementById("messages");
+  el.scrollTop=el.scrollHeight;
+}
+
+function escapeHtml(x){
+  return x.replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
 </script>
-
 </body>
 </html>
-
