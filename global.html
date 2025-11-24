@@ -3,35 +3,100 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Global Chat</title>
+<title>Global Chat — Reply & Delete</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-body{margin:0;background:#0a1220;color:#fff;font-family:Inter;display:flex;flex-direction:column;height:100dvh}
-.header{padding:16px;background:rgba(255,255,255,0.03);font-weight:700;display:flex;align-items:center;gap:16px}
-.back{cursor:pointer;color:#9bd;background:none;border:none}
-.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.msg{max-width:75%;padding:12px;border-radius:12px;background:rgba(255,255,255,0.05)}
-.me{background:linear-gradient(90deg,#4f46e5,#06b6d4)}
-.compose{display:flex;padding:12px;gap:8px;background:rgba(255,255,255,0.03)}
-.input{flex:1;padding:10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:white}
-.send{padding:10px 16px;border-radius:8px;background:#7c3aed;border:none;color:white;cursor:pointer}
-.meta{font-size:12px;color:#9aa8bb;margin-bottom:4px}
+  :root{
+    --bg:#0a1220;
+    --muted:#9aa8bb;
+    --accent1: #090909; /* message color in gradient*/
+    --accent2: #070707;
+    --reply-border: #7c3aed;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter}
+  .app{display:flex;flex-direction:column;height:100dvh}
+  .header{padding:16px;background:rgba(255,255,255,0.03);font-weight:700;display:flex;align-items:center;gap:16px}
+  .back{cursor:pointer;color:#9bd;background:none;border:none}
+  .messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:75%;padding:12px;border-radius:12px;background:rgba(255,255,255,0.05);position:relative;word-break:break-word}
+  .msg.me{align-self:flex-end;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .composeWrap{padding:10px;background:rgba(255,255,255,0.02)}
+  .replyPreview{
+    display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:8px;margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+  }
+  .replyBar{
+    width:4px;border-radius:2px;background:var(--reply-border);flex:0 0 4px;margin-right:6px;
+  }
+  .replyContent{flex:1;font-size:13px;color:var(--muted)}
+  .replyName{font-weight:600;color:#fff;font-size:13px;margin-bottom:4px}
+  .replyText{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+  .replyCancel{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px}
+  .compose{display:flex;gap:8px;align-items:center}
+  .input{flex:1;padding:10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.08);color:white;min-height:42px}
+  .send{padding:10px 16px;border-radius:8px;background:transparent;border:none;color:white;cursor:pointer}
+  .ctxMenu {
+    position:fixed;
+    z-index:9999;
+    background:rgba(18,18,25,0.98);
+    border:1px solid rgba(255,255,255,0.04);
+    padding:6px;
+    border-radius:8px;
+    box-shadow:0 6px 30px rgba(0,0,0,0.6);
+    display:flex;
+    flex-direction:column;
+    min-width:140px;
+  }
+  .ctxItem {
+    padding:10px 12px;
+    cursor:pointer;
+    border-radius:6px;
+    color:#fff;
+    font-size:14px;
+    user-select:none;
+    background:transparent;
+    text-align:left;
+    border:none;
+  }
+  .ctxItem:hover{background:rgba(255,255,255,0.02)}
+  .ctxItem.delete{color:#ff7b7b}
+  /* small visual for longpress */
+  .msg.longpressing { outline:2px solid rgba(255,255,255,0.04); transform:scale(0.998); }
+
+  @media (max-width:600px){ .msg{max-width:90%} .replyText{max-width:160px} }
 </style>
 </head>
-
 <body>
-<div class="header">
-  <button class="back" onclick="location.href='members.html'">←</button>
-  Global Chat
-</div>
+<div class="app">
+  <div class="header">
+    <button class="back" onclick="location.href='members.html'">←</button>
+    Global Chat
+  </div>
 
-<div id="messages" class="messages"></div>
+  <div id="messages" class="messages"></div>
 
-<div class="compose">
-  <input id="text" class="input" placeholder="Type message...">
-  <button id="btnSend" class="send">Send</button>
+  <div class="composeWrap">
+    <!-- Reply preview (hidden unless replying) -->
+    <div id="replyPreview" class="replyPreview" style="display:none;">
+      <div class="replyBar"></div>
+      <div style="flex:1">
+        <div class="replyName" id="replyName"></div>
+        <div class="replyText" id="replyText"></div>
+      </div>
+      <button id="cancelReply" class="replyCancel">✕</button>
+    </div>
+
+    <div class="compose">
+      <textarea id="text" class="input" placeholder="Type message..." rows="1"></textarea>
+      <button id="btnSend" class="send">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.61109 12.4L10.8183 18.5355C11.0462 19.6939 12.6026 19.9244 13.1565 18.8818L19.0211 7.84263C19.248 7.41555 19.2006 6.94354 18.9737 6.58417M9.61109 12.4L5.22642 8.15534C4.41653 7.37131 4.97155 6 6.09877 6H17.9135C18.3758 6 18.7568 6.24061 18.9737 6.58417M9.61109 12.4L18.9737 6.58417M19.0555 6.53333L18.9737 6.58417" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+  </svg>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Firebase compat scripts -->
@@ -40,7 +105,7 @@ body{margin:0;background:#0a1220;color:#fff;font-family:Inter;display:flex;flex-
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script>
-// CONFIG
+/* ================== CONFIG ================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
   authDomain:"gatochat-56ab6.firebaseapp.com",
@@ -50,69 +115,307 @@ const firebaseConfig = {
   messagingSenderId:"888124564246",
   appId:"1:888124564246:web:33a41ee68eec0f6b9c2637"
 };
-
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.database();
+/* ============================================ */
 
-auth.onAuthStateChanged(user=>{
-  if(!user) return location.href='login.html';
+let currentUser = null;
+let replyingTo = null; // { id, name, text }
+
+auth.onAuthStateChanged(user => {
+  if (!user) return location.href = 'login.html';
+  currentUser = user;
   initGlobal(user);
 });
 
 function initGlobal(user){
   const msgEl = document.getElementById("messages");
+  const textInput = document.getElementById("text");
+  const sendBtn = document.getElementById("btnSend");
 
-  // Load old
-  db.ref("global/messages").limitToLast(50).once("value").then(snap=>{
-    snap.forEach(child=>{
-      renderMessage(child.val(), user.uid);
+  // track rendered ids
+  const rendered = new Set();
+
+  // Load last 50 messages
+  db.ref("global/messages").limitToLast(50).orderByChild('time').once("value").then(snap=>{
+    msgEl.innerHTML = '';
+    snap.forEach(child => {
+      const id = child.key;
+      const m = child.val();
+      renderMessage(id, m, user.uid, rendered);
     });
     msgEl.scrollTop = msgEl.scrollHeight;
   });
 
-  // Live
-  db.ref("global/messages").limitToLast(1).on("child_added", snap=>{
-    renderMessage(snap.val(), user.uid);
-    msgEl.scrollTop = msgEl.scrollHeight;
+  // realtime child_added
+  db.ref("global/messages").limitToLast(50).orderByChild('time').on("child_added", snap=>{
+    const id = snap.key;
+    if (rendered.has(id)) return;
+    const m = snap.val();
+    renderMessage(id, m, user.uid, rendered);
+    // small timeout to ensure DOM appended before scrolling
+    setTimeout(()=> msgEl.scrollTop = msgEl.scrollHeight, 50);
   });
 
-  document.getElementById("btnSend").onclick = () =>{
-    send(user);
-  };
+  // child_removed -> show "Message deleted" placeholder
+  db.ref("global/messages").on("child_removed", snap => {
+    const id = snap.key;
+    const el = document.querySelector(`[data-msgid="${id}"]`);
+    if (el) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'msg';
+      placeholder.style.maxWidth = '60%';
+      placeholder.style.background = 'rgba(255,255,255,0.02)';
+      placeholder.style.color = '#9aa8bb';
+      placeholder.innerHTML = `<div class="meta">${new Date().toLocaleTimeString()}</div><div>Message deleted</div>`;
+      el.replaceWith(placeholder);
+    }
+    rendered.delete(id);
+  });
+
+  // Sending
+  sendBtn.onclick = () => sendMessage(user);
+
+  // Enter to send, Shift+Enter newline
+  textInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(user);
+    }
+  });
+
+  // cancel reply
+  document.getElementById('cancelReply').addEventListener('click', clearReplyPreview);
 }
 
-function send(user){
-  const text = document.getElementById("text").value.trim();
-  if(!text) return;
+/* ========== RENDER MESSAGE ========== */
+function renderMessage(id, m, myUid, renderedSet){
+  const messagesEl = document.getElementById("messages");
+  const div = document.createElement('div');
+  div.className = 'msg' + (m.uid === myUid ? ' me' : '');
+  div.setAttribute('data-msgid', id);
 
-  const msg = {
+  // Build inner HTML, include reply block if present my reply/message with line 
+  let replyHtml = '';
+    if (m.reply && m.reply.text) {
+    replyHtml = `
+      <div style="border-left:3px solid #4da3ff;padding-left:10px;margin-bottom:6px;">
+        <div style="font-weight:600;color:#4da3ff;font-size:13px;margin-bottom:2px;">
+          ${escape(m.reply.name || 'Unknown')}
+        </div>
+        <div style="color:var(--muted);font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${escape(m.reply.text)}
+        </div>
+      </div>
+    `;
+  }
+
+
+  // message text (or deleted marker if flagged)
+  let textHtml = `<div class="text">${escape(m.text || '')}</div>`;
+
+  // meta line
+  const meta = `<div class="meta">${escape(m.name || 'User')} — ${new Date(m.time || Date.now()).toLocaleTimeString()}</div>`;
+
+  div.innerHTML = `${meta}${replyHtml}${textHtml}`;
+
+  // Add long-press / right-click behavior for context menu (Reply/Delete)
+  enableLongPressAndContext(div, id, m, myUid);
+
+  messagesEl.appendChild(div);
+  renderedSet && renderedSet.add(id);
+}
+
+/* ========== LONG-PRESS / CONTEXT MENU ========== */
+function enableLongPressAndContext(el, msgId, messageData, myUid) {
+  let timer = null;
+  const LONG_MS = 600;
+  let longPressed = false;
+
+  const start = (x, y) => {
+    timer = setTimeout(() => {
+      longPressed = true;
+      el.classList.add('longpressing');
+      showActionMenu(x, y, msgId, messageData, myUid);
+    }, LONG_MS);
+  };
+  const cancel = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    if (longPressed) {
+      longPressed = false;
+      el.classList.remove('longpressing');
+    }
+  };
+
+  // touch
+  el.addEventListener('touchstart', (ev) => {
+    const t = ev.touches && ev.touches[0];
+    if (t) start(t.clientX, t.clientY);
+  }, {passive:true});
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchmove', cancel);
+  el.addEventListener('touchcancel', cancel);
+
+  // mouse: right click
+  el.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    showActionMenu(ev.clientX, ev.clientY, msgId, messageData, myUid);
+    return false;
+  });
+
+  // mouse: optional long left-click
+  el.addEventListener('mousedown', (ev) => {
+    if (ev.button !== 0) return;
+    start(ev.clientX, ev.clientY);
+  });
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+}
+
+/* ========== ACTION MENU (floating) ========== */
+let activeCtx = null;
+function showActionMenu(x, y, msgId, messageData, myUid) {
+  hideActionMenu();
+
+  const menu = document.createElement('div');
+  menu.className = 'ctxMenu';
+  menu.style.left = (x + 6) + 'px';
+  menu.style.top = (y + 6) + 'px';
+
+  // Reply (always available)
+  const replyBtn = document.createElement('button');
+  replyBtn.className = 'ctxItem';
+  replyBtn.innerText = 'Reply';
+  replyBtn.onclick = () => {
+    hideActionMenu();
+    openReplyPreview(msgId, messageData);
+  };
+  menu.appendChild(replyBtn);
+
+  // Delete (only if owner)
+  if (messageData.uid === myUid) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'ctxItem delete';
+    delBtn.innerText = 'Delete';
+    delBtn.onclick = async () => {
+      hideActionMenu();
+      const ok = confirm("Delete this message?");
+      if (!ok) return;
+      try {
+        await db.ref("global/messages/" + msgId).remove();
+      } catch (err) {
+        console.error("delete failed", err);
+        alert("Could not delete message. Check console.");
+      }
+    };
+    menu.appendChild(delBtn);
+  }
+
+  // Cancel
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'ctxItem';
+  cancelBtn.innerText = 'Cancel';
+  cancelBtn.onclick = hideActionMenu;
+  menu.appendChild(cancelBtn);
+
+  document.body.appendChild(menu);
+  activeCtx = menu;
+
+  // reposition if overflow
+  const rect = menu.getBoundingClientRect();
+  const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+  const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+  if (rect.right > vw) menu.style.left = (vw - rect.width - 12) + 'px';
+  if (rect.bottom > vh) menu.style.top = (vh - rect.height - 12) + 'px';
+
+  setTimeout(() => {
+    window.addEventListener('click', outsideClickClose);
+    window.addEventListener('resize', hideActionMenu);
+    window.addEventListener('scroll', hideActionMenu, true);
+  }, 50);
+}
+function hideActionMenu() {
+  if (activeCtx) {
+    activeCtx.remove();
+    activeCtx = null;
+    window.removeEventListener('click', outsideClickClose);
+    window.removeEventListener('resize', hideActionMenu);
+    window.removeEventListener('scroll', hideActionMenu, true);
+    document.querySelectorAll('.msg.longpressing').forEach(el => el.classList.remove('longpressing'));
+  }
+}
+function outsideClickClose(e) {
+  if (!activeCtx) return;
+  if (!activeCtx.contains(e.target)) hideActionMenu();
+}
+
+/* ========== REPLY PREVIEW ========== */
+function openReplyPreview(msgId, messageData) {
+  // messageData may be undefined in rare cases; guard
+  if (!messageData) return;
+  replyingTo = {
+    id: msgId,
+    name: messageData.name || 'Unknown',
+    text: (messageData.text||'').slice(0, 300)
+  };
+  document.getElementById('replyName').innerText = replyingTo.name;
+  document.getElementById('replyText').innerText = replyingTo.text;
+  document.getElementById('replyPreview').style.display = 'flex';
+  document.getElementById('text').focus();
+}
+function clearReplyPreview(){
+  replyingTo = null;
+  document.getElementById('replyPreview').style.display = 'none';
+  document.getElementById('replyName').innerText = '';
+  document.getElementById('replyText').innerText = '';
+}
+
+/* ========== SEND MESSAGE (includes reply metadata if any) ========== */
+function sendMessage(user){
+  const box = document.getElementById('text');
+  const txt = box.value.trim();
+  if (!txt) return;
+
+  const payload = {
     uid: user.uid,
-    name: user.displayName || "User",
-    text: text,
+    name: user.displayName || 'User',
+    text: txt,
     time: Date.now()
   };
 
-  db.ref("global/messages").push(msg);
-  document.getElementById("text").value = "";
+  if (replyingTo) {
+    payload.reply = {
+      id: replyingTo.id,
+      name: replyingTo.name,
+      text: replyingTo.text
+    };
+  }
+
+  db.ref("global/messages").push(payload)
+    .then(() => {
+      box.value = '';
+      clearReplyPreview();
+    }).catch(err => {
+      console.error("send failed", err);
+      alert("Could not send message. Check console.");
+    });
 }
 
-function renderMessage(m,my){
-  const div = document.createElement("div");
-  div.className = "msg "+(m.uid===my?"me":"");
-
-  div.innerHTML =
-    `<div class="meta">${m.name} — ${new Date(m.time).toLocaleTimeString()}</div>
-     <div>${escape(m.text)}</div>`;
-
-  document.getElementById("messages").appendChild(div);
+/* ========== UTIL ========== */
+function escape(s){
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function escape(t){
-  return t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-}
+/* Prevent native context menu on non-input elements so our right-click works for messages */
+document.addEventListener('contextmenu', (e) => {
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+  // allow default elsewhere (optional) — but we prevent to ensure message right-click works
+  e.preventDefault();
+}, {passive:false});
 </script>
 </body>
 </html>
-
