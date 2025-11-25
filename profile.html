@@ -25,7 +25,7 @@
   <h2 style="margin:0 0 12px 0">Edit Profile</h2>
 
   <div class="picBox" id="profilePicHolder">
-    <img id="profilePic" src="https://via.placeholder.com/300x300?text=Avatar" alt="avatar">
+    <img id="profilePic" src="https://via.placeholder.com/300x300?text=Avatar" alt=".">
   </div>
 
   <label class="fileLabel btnPrimary" for="fileInput">Choose New Photo</label>
@@ -69,7 +69,26 @@ const profilePic = document.getElementById('profilePic');
 const fileInput = document.getElementById('fileInput');
 const saveBtn = document.getElementById('saveBtn');
 const signOutBtn = document.getElementById('signOut');
-const statusEl = document.getElementById('onlineStatus'); // add this in your HTML to show online/offline
+const statusEl = document.getElementById('onlineStatus'); // optional element
+const loadingOverlay = document.createElement('div'); // overlay element
+
+loadingOverlay.style.position = 'absolute';
+loadingOverlay.style.top = '0';
+loadingOverlay.style.left = '0';
+loadingOverlay.style.width = '100%';
+loadingOverlay.style.height = '100%';
+loadingOverlay.style.background = 'rgba(0,0,0,0.5)';
+loadingOverlay.style.color = '#fff';
+loadingOverlay.style.display = 'flex';
+loadingOverlay.style.alignItems = 'center';
+loadingOverlay.style.justifyContent = 'center';
+loadingOverlay.style.fontSize = '14px';
+loadingOverlay.style.borderRadius = '50%';
+loadingOverlay.style.zIndex = '10';
+loadingOverlay.style.display = 'none';
+loadingOverlay.innerText = 'Uploading...';
+profilePic.parentElement.style.position = 'relative';
+profilePic.parentElement.appendChild(loadingOverlay);
 
 let currentUser = null;
 let uploadedUrl = null;
@@ -80,15 +99,21 @@ auth.onAuthStateChanged(async user => {
   if (!user) return location.href = 'login.html';
   currentUser = user;
 
-  // Init presence tracking
   initPresence(user);
-
-  // Load profile info once
-  const snap = await db.ref('users/' + user.uid).once('value');
-  const data = snap.val() || {};
-  if (data.name) nameInput.value = data.name;
-  if (data.photo) profilePic.src = data.photo;
+  loadProfile(user);
 });
+
+/* ---------------- LOAD PROFILE ---------------- */
+async function loadProfile(user){
+  try {
+    const snap = await db.ref('users/' + user.uid).once('value');
+    const data = snap.val() || {};
+    if (data.name) nameInput.value = data.name;
+    if (data.photo) profilePic.src = data.photo;
+  } catch(err) {
+    console.error('Failed to load profile', err);
+  }
+}
 
 /* ---------------- PRESENCE TRACKING ---------------- */
 function initPresence(user){
@@ -101,18 +126,13 @@ function initPresence(user){
       presenceRef.set({ online:true, lastSeen:Date.now(), name:user.displayName||'' });
       presenceRef.onDisconnect().set({ online:false, lastSeen:Date.now(), name:user.displayName||'' });
       updateStatus(true);
-    } else {
-      updateStatus(false);
-    }
+    } else updateStatus(false);
   });
 
-  // Update lastSeen periodically while page is open
-  setInterval(() => {
-    presenceRef?.update({ lastSeen: Date.now(), online:true });
-  }, 30_000); // every 30 seconds
+  // periodic lastSeen update
+  setInterval(()=> presenceRef?.update({ lastSeen:Date.now(), online:true }), 30_000);
 }
 
-// Show online/offline in profile page
 function updateStatus(isOnline){
   if (!statusEl) return;
   statusEl.textContent = isOnline ? "Online" : "Offline";
@@ -123,24 +143,37 @@ function updateStatus(isOnline){
 fileInput.addEventListener('change', async () => {
   const file = fileInput.files[0];
   if (!file) return;
+
   try {
+    // show loading
+    loadingOverlay.style.display = 'flex';
     profilePic.style.filter = 'grayscale(80%)';
-    const url = await uploadToImgBB(file);
-    uploadedUrl = url;
-    profilePic.src = url;
+
+    const randomName = `profile_${Date.now()}_${Math.floor(Math.random()*100000)}`;
+    uploadedUrl = await uploadToImgBB(file, randomName);
+
+    profilePic.src = uploadedUrl;
     profilePic.style.filter = '';
-    alert('Upload successful. Click Save Profile to persist.');
-  } catch (err) {
+    alert('Upload successful! Click Save Profile to persist.');
+  } catch(err){
     console.error('Upload error', err);
     alert('Upload failed: ' + err.message);
     profilePic.style.filter = '';
+  } finally {
+    loadingOverlay.style.display = 'none'; // hide overlay
   }
 });
 
-async function uploadToImgBB(file){
+// optimized upload: add random name
+async function uploadToImgBB(file, name){
   const form = new FormData();
   form.append('image', file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method:'POST', body:form });
+  form.append('name', name); // random name
+
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+    method:'POST', 
+    body: form
+  });
   const json = await res.json();
   if (!json || !json.success) throw new Error(json?.error?.message || 'ImgBB upload failed');
   return json.data.url;
@@ -149,18 +182,20 @@ async function uploadToImgBB(file){
 /* ---------------- SAVE PROFILE ---------------- */
 saveBtn.addEventListener('click', async () => {
   if (!currentUser) return alert('Not signed in.');
-  const name = (nameInput.value || '').trim();
+
+  const name = (nameInput.value||'').trim();
   const updates = {};
   if (name) updates.name = name;
   if (uploadedUrl) updates.photo = uploadedUrl;
-  if (Object.keys(updates).length === 0) return alert('Nothing to save.');
+
+  if (!Object.keys(updates).length) return alert('Nothing to save.');
 
   try {
     await db.ref('users/' + currentUser.uid).update(updates);
     if (name) await currentUser.updateProfile({ displayName:name }).catch(()=>{});
     alert('Profile saved.');
     location.href = 'members.html';
-  } catch (err) {
+  } catch(err){
     console.error('Save failed', err);
     alert('Save failed: ' + err.message);
   }

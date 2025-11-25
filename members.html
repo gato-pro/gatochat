@@ -21,25 +21,46 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226
 .name{font-weight:600}
 .status-text{font-size:12px;color:#9aa8bb}
 .status-dot{width:10px;height:10px;border-radius:50%}
-.signout{background:#ef4444;padding:8px 10px;border-radius:8px;color:#fff;border:none;cursor:pointer}
+.signout{background:#c31d1d;padding:3px;border-radius:4px;color:#fff;border:none;cursor:pointer}
 .meta-time{font-size:11px;color:#9aa8bb;white-space:nowrap}
 .preview{font-size:13px;color:#cfd8e3;opacity:0.95;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .preview.you{color:#a6d8ff}
 .preview.deleted{color:#a7a7a7;font-style:italic}
 .preview-type{margin-right:6px}
 .top-actions{display:flex;gap:8px;align-items:center}
-.profile-btn{background:#06b6d4;color:#012;padding:8px;border-radius:8px;border:none;cursor:pointer}
+.profile-btn{background:#1bd05179;color:rgb(255, 255, 255);padding:8px;border-radius:8px;border:none;cursor:pointer}
 @media (max-width:600px){.header{flex-direction:column;gap:12px}.preview{max-width:160px}}
 </style>
 </head>
 
 <body>
+
+  <!-- Add this inside your body at the top -->
+<div id="loadingOverlay" style="
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.7);color:white;display:flex;
+    justify-content:center;align-items:center;font-size:20px;
+    z-index:9999;">Loading users...</div>
+
+
 <div class="header">
   <div class="title">Chat — Members</div>
   <div class="top-actions">
-    <button id="btnProfile" class="profile-btn" style="margin-right:8px">My Profile</button>
-    <button id="btnGlobal" class="profile-btn" style="background:#06b6d4;color:#012">Global</button>
-    <button id="btnSignOut" class="signout">Sign out</button>
+   <div id="myProfile" style="margin-right:8px;cursor:pointer;width:44px;height:44px;border-radius:50%;overflow:hidden;background:#0b1220;display:flex;align-items:center;justify-content:center;">
+  <!-- SVG will go here if no profile picture -->
+   <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 394.662 394.662" xml:space="preserve" width="64px" height="64px" fill="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path style="fill:#F4C8C1;" d="M258.211,96.97c-15.3-16.09-36.92-26.12-60.88-26.12c-23.97,0-45.59,10.04-60.9,26.13 c6.96-27.14,31.58-47.2,60.9-47.2C226.631,49.78,251.261,69.84,258.211,96.97z"></path> <path style="fill:#FFDED7;" d="M260.181,112.63c0,34.72-28.14,79.4-62.85,79.4c-34.72,0-62.86-44.68-62.86-79.4 c0-5.4,0.68-10.65,1.96-15.65c15.31-16.09,36.93-26.13,60.9-26.13c23.96,0,45.58,10.03,60.88,26.12 C259.501,101.98,260.181,107.22,260.181,112.63z"></path> <path style="fill:#999999;" d="M300.531,279.47v0.01c-27.75,23.75-63.8,38.1-103.2,38.1c-19.26,0-37.73-3.43-54.81-9.72 c-17.87-6.56-34.22-16.25-48.41-28.4c0.08-0.87,0.17-1.73,0.27-2.6c0.09-0.76,0.18-1.52,0.29-2.27c0.03-0.21,0.06-0.41,0.09-0.62 c0.1-0.75,0.22-1.5,0.35-2.24c0.06-0.38,0.13-0.77,0.2-1.16c0.06-0.38,0.14-0.76,0.21-1.15c0.08-0.41,0.16-0.83,0.25-1.25 c0.08-0.42,0.17-0.83,0.26-1.24s0.18-0.82,0.28-1.23c0.04-0.18,0.08-0.36,0.12-0.53c0.04-0.18,0.08-0.36,0.13-0.54 c0.13-0.55,0.26-1.1,0.41-1.65c0-0.04,0.01-0.08,0.03-0.11c15.75,12.86,34.01,22.75,53.93,28.82c14.67,4.48,30.26,6.89,46.4,6.89 c38.05,0,72.98-13.38,100.32-35.7c0.03,0.12,0.06,0.24,0.09,0.37c0.01,0.04,0.02,0.07,0.03,0.11c0.13,0.5,0.25,0.99,0.37,1.49v0.01 c0.01,0.04,0.02,0.09,0.03,0.14c0.02,0.07,0.04,0.15,0.05,0.22c0.14,0.57,0.27,1.15,0.39,1.72c0.11,0.51,0.22,1.02,0.32,1.54 c0.09,0.41,0.17,0.81,0.24,1.22c0.13,0.65,0.24,1.3,0.35,1.96c0.01,0.07,0.03,0.15,0.03,0.23c0.11,0.63,0.21,1.26,0.3,1.9 c0.05,0.3,0.09,0.6,0.13,0.91c0.11,0.72,0.2,1.44,0.28,2.17C300.361,277.73,300.451,278.6,300.531,279.47z"></path> <path style="fill:#CCCCCC;" d="M297.651,262.88c-27.34,22.32-62.27,35.7-100.32,35.7c-38.06,0-72.98-13.38-100.33-35.71 c5.43-20.95,17.26-39.33,33.27-52.93c11.16-9.48,27.12-10.27,39.64-2.68c8.46,5.13,17.72,8.14,27.42,8.14s18.95-3.01,27.41-8.14 c12.49-7.56,28.42-6.83,39.56,2.61C280.351,223.48,292.211,241.88,297.651,262.88z"></path> <path style="fill:#ba52ff;" d="M287.951,28.38C262.251,10.49,231.021,0,197.331,0c-25.59,0-49.77,6.05-71.17,16.8 c-51.96,26.1-87.62,79.88-87.62,141.99c0,7.87,0.57,15.61,1.68,23.17c5.68,38.85,25.42,73.13,53.89,97.5 c0.08-0.87,0.17-1.73,0.27-2.6c0.09-0.76,0.18-1.52,0.29-2.27c0.03-0.21,0.06-0.41,0.09-0.62c0.1-0.75,0.22-1.5,0.35-2.24 c0.06-0.38,0.13-0.77,0.2-1.16c0.06-0.38,0.14-0.76,0.21-1.15c0.08-0.41,0.16-0.83,0.25-1.25c0.08-0.42,0.17-0.83,0.26-1.24 s0.18-0.82,0.28-1.23c0.04-0.18,0.08-0.36,0.12-0.53c0.04-0.18,0.08-0.36,0.13-0.54c0.13-0.55,0.26-1.1,0.41-1.65 c0-0.04,0.01-0.08,0.03-0.11c0-0.03,0.01-0.06,0.02-0.08c0.15-0.6,0.31-1.2,0.48-1.79c0.37-1.33,0.77-2.64,1.19-3.95 c0.12-0.36,0.23-0.72,0.36-1.08c0.17-0.51,0.34-1.01,0.52-1.51c0.23-0.67,0.47-1.33,0.72-1.98c0.68-1.82,1.42-3.62,2.21-5.39 c0.23-0.55,0.48-1.1,0.74-1.64c0.01-0.03,0.02-0.05,0.04-0.08c0.16-0.36,0.33-0.72,0.5-1.07c0.05-0.09,0.09-0.19,0.14-0.28 c0.27-0.59,0.56-1.18,0.86-1.76c0.6-1.18,1.21-2.35,1.86-3.5c0.31-0.58,0.64-1.16,0.98-1.73c0.32-0.57,0.66-1.14,1.01-1.7 c0.33-0.56,0.68-1.12,1.04-1.68c0.7-1.12,1.42-2.22,2.18-3.3c0.24-0.37,0.49-0.73,0.76-1.09c0,0,0-0.01,0.01-0.01 c0.33-0.49,0.68-0.96,1.04-1.45c0.26-0.37,0.54-0.75,0.83-1.11c0.05-0.06,0.09-0.13,0.14-0.19c0.23-0.32,0.46-0.62,0.71-0.93 c0.8-1.04,1.62-2.06,2.47-3.07c0.39-0.48,0.8-0.96,1.22-1.43c0.03-0.04,0.06-0.08,0.1-0.12c0.33-0.38,0.66-0.76,1-1.13 c0.69-0.78,1.39-1.54,2.11-2.28c0.27-0.3,0.56-0.59,0.84-0.88c0.69-0.71,1.38-1.4,2.09-2.08c0.03-0.04,0.05-0.06,0.08-0.08 c0.59-0.58,1.19-1.15,1.8-1.7c0.11-0.11,0.23-0.22,0.34-0.32c0.45-0.41,0.91-0.82,1.37-1.23c0.5-0.44,1-0.88,1.51-1.31 c11.16-9.48,27.12-10.27,39.64-2.68c0.65,0.4,1.31,0.78,1.98,1.15c0.37,0.21,0.74,0.41,1.11,0.6c1.05,0.57,2.12,1.1,3.2,1.59 c0.22,0.11,0.45,0.21,0.68,0.31c0.39,0.18,0.79,0.35,1.18,0.51c0.49,0.2,0.98,0.4,1.47,0.59c1.29,0.49,2.6,0.94,3.92,1.33 c0.47,0.14,0.95,0.28,1.43,0.4c0.51,0.14,1.02,0.27,1.54,0.39c0.58,0.13,1.15,0.25,1.73,0.37c0.44,0.09,0.88,0.17,1.32,0.24h0.03 c0.43,0.07,0.85,0.14,1.28,0.2c0.03,0,0.05,0.01,0.08,0.01h0.01c0.05,0.01,0.11,0.01,0.16,0.02c0.39,0.06,0.79,0.1,1.18,0.15 c0.41,0.05,0.82,0.09,1.23,0.11c0.12,0.02,0.23,0.03,0.35,0.04c0.32,0.02,0.63,0.04,0.95,0.05c0.32,0.03,0.64,0.04,0.96,0.05 c0.54,0.02,1.09,0.03,1.63,0.03c9.7,0,18.95-3.01,27.41-8.14c12.49-7.56,28.42-6.83,39.56,2.61c0.51,0.43,1.02,0.87,1.52,1.31 c0.38,0.34,0.75,0.67,1.12,1.01c0.98,0.89,1.95,1.8,2.9,2.73c0.57,0.55,1.12,1.11,1.67,1.67c0.61,0.62,1.2,1.25,1.8,1.89 c0.53,0.57,1.06,1.15,1.57,1.74c0.35,0.4,0.7,0.79,1.04,1.19c0.3,0.34,0.59,0.68,0.88,1.03c0.65,0.77,1.28,1.56,1.9,2.35 c0.6,0.76,1.19,1.52,1.77,2.3c0.02,0.03,0.04,0.07,0.07,0.1c0.03,0.04,0.06,0.07,0.08,0.11c0.35,0.45,0.69,0.92,1.01,1.38 c0.39,0.53,0.77,1.07,1.14,1.62c0.38,0.54,0.75,1.09,1.11,1.64c0.33,0.5,0.66,1,0.98,1.51c0.04,0.07,0.08,0.14,0.13,0.21 c0.22,0.34,0.43,0.67,0.63,1.02c0.3,0.47,0.59,0.95,0.87,1.44c0.06,0.09,0.12,0.19,0.17,0.28c0.27,0.44,0.53,0.89,0.77,1.34 c0.2,0.32,0.38,0.65,0.56,0.98c0.45,0.81,0.89,1.63,1.32,2.46c0.14,0.27,0.29,0.55,0.43,0.83c0.15,0.28,0.29,0.56,0.42,0.84 c0.01,0.02,0.02,0.03,0.03,0.05s0.02,0.04,0.03,0.06c0.26,0.53,0.52,1.06,0.77,1.6c0.16,0.32,0.31,0.64,0.45,0.96 c0.33,0.71,0.65,1.42,0.96,2.13c0.3,0.68,0.59,1.37,0.87,2.07c0.29,0.69,0.57,1.39,0.84,2.1c0.07,0.19,0.14,0.38,0.21,0.58 c0.18,0.48,0.36,0.95,0.53,1.43c0.02,0.04,0.03,0.09,0.05,0.13c0.11,0.3,0.22,0.61,0.32,0.92c0.25,0.71,0.49,1.43,0.73,2.16 s0.47,1.47,0.69,2.21c0.18,0.62,0.36,1.23,0.53,1.86c0.13,0.46,0.26,0.92,0.38,1.39c0.04,0.12,0.07,0.25,0.1,0.38 c0.03,0.12,0.06,0.24,0.09,0.37c0.01,0.04,0.02,0.07,0.03,0.11c0.13,0.49,0.26,0.99,0.37,1.49v0.01c0.01,0.04,0.02,0.09,0.03,0.14 c0.02,0.07,0.04,0.15,0.05,0.22c0.14,0.57,0.27,1.14,0.39,1.72c0.11,0.51,0.22,1.02,0.32,1.54c0.09,0.41,0.17,0.81,0.24,1.22 c0.13,0.65,0.24,1.3,0.35,1.96c0.01,0.07,0.03,0.15,0.03,0.23c0.11,0.63,0.21,1.26,0.3,1.9c0.05,0.3,0.09,0.6,0.13,0.91 c0.11,0.72,0.2,1.44,0.28,2.17c0.1,0.86,0.19,1.73,0.27,2.6c34.03-29.12,55.59-72.38,55.59-120.68 C356.121,104.78,329.151,57.06,287.951,28.38z M203.011,191.62h-0.01c-1.87,0.27-3.76,0.41-5.67,0.41 c-34.72,0-62.86-44.68-62.86-79.4c0-34.71,28.14-62.85,62.86-62.85c26.69,0,49.5,16.64,58.61,40.11 c2.74,7.05,4.24,14.72,4.24,22.74C260.181,145.44,235.061,187.13,203.011,191.62z"></path> <rect x="88.102" y="344.873" style="fill:#666666;" width="218.452" height="15"></rect> <rect x="88.102" y="379.662" style="fill:#666666;" width="218.452" height="15"></rect> <path style="opacity:0.23;fill:#F2F2F2;enable-background:new ;" d="M126.161,16.8l-11.09,21.31l-11.83,22.74l-25.96,49.88 l-12.39,23.82l-23.94,46l-0.73,1.41c-1.11-7.56-1.68-15.3-1.68-23.17C38.541,96.68,74.201,42.9,126.161,16.8z"></path> <path style="opacity:0.23;fill:#F2F2F2;enable-background:new ;" d="M356.121,158.79c0,48.3-21.56,91.56-55.59,120.68v0.01 c-27.75,23.75-63.8,38.1-103.2,38.1c-19.26,0-37.73-3.43-54.81-9.72l8.41-16.17l39.93-76.74h0.01l12.13-23.33h0.01l52.93-101.73 l32.01-61.51C329.151,57.06,356.121,104.78,356.121,158.79z"></path> </g> </g></svg>
+</div>
+
+    <button id="btnGlobal" class="profile-btn" style="background:#005eff9e;color:rgb(255, 255, 255)">Chat With Everyone</button>
+    <button id="btnSignOut" class="signout">
+      <svg fill="#ffffff" xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 52 52" enable-background="new 0 0 52 52" xml:space="preserve">
+        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+        <g id="SVGRepo_iconCarrier"> <g> <path d="M21,48.5v-3c0-0.8-0.7-1.5-1.5-1.5h-10C8.7,44,8,43.3,8,42.5v-33C8,8.7,8.7,8,9.5,8h10 C20.3,8,21,7.3,21,6.5v-3C21,2.7,20.3,2,19.5,2H6C3.8,2,2,3.8,2,6v40c0,2.2,1.8,4,4,4h13.5C20.3,50,21,49.3,21,48.5z">
+        </path> <path d="M49.6,27c0.6-0.6,0.6-1.5,0-2.1L36.1,11.4c-0.6-0.6-1.5-0.6-2.1,0l-2.1,2.1c-0.6,0.6-0.6,1.5,0,2.1l5.6,5.6 c0.6,0.6,0.2,1.7-0.7,1.7H15.5c-0.8,0-1.5,0.6-1.5,1.4v3c0,0.8,0.7,1.6,1.5,1.6h21.2c0.9,0,1.3,1.1,0.7,1.7l-5.6,5.6 c-0.6,0.6-0.6,1.5,0,2.1l2.1,2.1c0.6,0.6,1.5,0.6,2.1,0L49.6,27z">          
+        </path> </g> </g>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -64,7 +85,7 @@ const firebaseConfig = {
     projectId: "gatochat-56ab6",
     storageBucket: "gatochat-56ab6.firebasestorage.app",
     messagingSenderId: "888124564246",
-    appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
+    appId: "1:888124564246:web:33a41ee68f6b9c2637"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -86,25 +107,54 @@ let presenceListenerAttached = false;
 auth.onAuthStateChanged(user => {
     if (!user) return location.href = "index.html";
     currentUid = user.uid;
+    const myProfileEl = document.getElementById("myProfile");
+
+// Load current user's profile picture
+db.ref("users/"+currentUid).once("value").then(snap=>{
+  const data = snap.val() || {};
+  const photo = data.photo || "";
+  if(photo){
+    myProfileEl.innerHTML = `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    myProfileEl.innerHTML = `
+      <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 394.662 394.662" xml:space="preserve" width="45px" height="45px" fill="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path style="fill:#F4C8C1;" d="M258.211,96.97c-15.3-16.09-36.92-26.12-60.88-26.12c-23.97,0-45.59,10.04-60.9,26.13 c6.96-27.14,31.58-47.2,60.9-47.2C226.631,49.78,251.261,69.84,258.211,96.97z"></path> <path style="fill:#FFDED7;" d="M260.181,112.63c0,34.72-28.14,79.4-62.85,79.4c-34.72,0-62.86-44.68-62.86-79.4 c0-5.4,0.68-10.65,1.96-15.65c15.31-16.09,36.93-26.13,60.9-26.13c23.96,0,45.58,10.03,60.88,26.12 C259.501,101.98,260.181,107.22,260.181,112.63z"></path> <path style="fill:#999999;" d="M300.531,279.47v0.01c-27.75,23.75-63.8,38.1-103.2,38.1c-19.26,0-37.73-3.43-54.81-9.72 c-17.87-6.56-34.22-16.25-48.41-28.4c0.08-0.87,0.17-1.73,0.27-2.6c0.09-0.76,0.18-1.52,0.29-2.27c0.03-0.21,0.06-0.41,0.09-0.62 c0.1-0.75,0.22-1.5,0.35-2.24c0.06-0.38,0.13-0.77,0.2-1.16c0.06-0.38,0.14-0.76,0.21-1.15c0.08-0.41,0.16-0.83,0.25-1.25 c0.08-0.42,0.17-0.83,0.26-1.24s0.18-0.82,0.28-1.23c0.04-0.18,0.08-0.36,0.12-0.53c0.04-0.18,0.08-0.36,0.13-0.54 c0.13-0.55,0.26-1.1,0.41-1.65c0-0.04,0.01-0.08,0.03-0.11c15.75,12.86,34.01,22.75,53.93,28.82c14.67,4.48,30.26,6.89,46.4,6.89 c38.05,0,72.98-13.38,100.32-35.7c0.03,0.12,0.06,0.24,0.09,0.37c0.01,0.04,0.02,0.07,0.03,0.11c0.13,0.5,0.25,0.99,0.37,1.49v0.01 c0.01,0.04,0.02,0.09,0.03,0.14c0.02,0.07,0.04,0.15,0.05,0.22c0.14,0.57,0.27,1.15,0.39,1.72c0.11,0.51,0.22,1.02,0.32,1.54 c0.09,0.41,0.17,0.81,0.24,1.22c0.13,0.65,0.24,1.3,0.35,1.96c0.01,0.07,0.03,0.15,0.03,0.23c0.11,0.63,0.21,1.26,0.3,1.9 c0.05,0.3,0.09,0.6,0.13,0.91c0.11,0.72,0.2,1.44,0.28,2.17C300.361,277.73,300.451,278.6,300.531,279.47z"></path> <path style="fill:#CCCCCC;" d="M297.651,262.88c-27.34,22.32-62.27,35.7-100.32,35.7c-38.06,0-72.98-13.38-100.33-35.71 c5.43-20.95,17.26-39.33,33.27-52.93c11.16-9.48,27.12-10.27,39.64-2.68c8.46,5.13,17.72,8.14,27.42,8.14s18.95-3.01,27.41-8.14 c12.49-7.56,28.42-6.83,39.56,2.61C280.351,223.48,292.211,241.88,297.651,262.88z"></path> <path style="fill:#ba52ff;" d="M287.951,28.38C262.251,10.49,231.021,0,197.331,0c-25.59,0-49.77,6.05-71.17,16.8 c-51.96,26.1-87.62,79.88-87.62,141.99c0,7.87,0.57,15.61,1.68,23.17c5.68,38.85,25.42,73.13,53.89,97.5 c0.08-0.87,0.17-1.73,0.27-2.6c0.09-0.76,0.18-1.52,0.29-2.27c0.03-0.21,0.06-0.41,0.09-0.62c0.1-0.75,0.22-1.5,0.35-2.24 c0.06-0.38,0.13-0.77,0.2-1.16c0.06-0.38,0.14-0.76,0.21-1.15c0.08-0.41,0.16-0.83,0.25-1.25c0.08-0.42,0.17-0.83,0.26-1.24 s0.18-0.82,0.28-1.23c0.04-0.18,0.08-0.36,0.12-0.53c0.04-0.18,0.08-0.36,0.13-0.54c0.13-0.55,0.26-1.1,0.41-1.65 c0-0.04,0.01-0.08,0.03-0.11c0-0.03,0.01-0.06,0.02-0.08c0.15-0.6,0.31-1.2,0.48-1.79c0.37-1.33,0.77-2.64,1.19-3.95 c0.12-0.36,0.23-0.72,0.36-1.08c0.17-0.51,0.34-1.01,0.52-1.51c0.23-0.67,0.47-1.33,0.72-1.98c0.68-1.82,1.42-3.62,2.21-5.39 c0.23-0.55,0.48-1.1,0.74-1.64c0.01-0.03,0.02-0.05,0.04-0.08c0.16-0.36,0.33-0.72,0.5-1.07c0.05-0.09,0.09-0.19,0.14-0.28 c0.27-0.59,0.56-1.18,0.86-1.76c0.6-1.18,1.21-2.35,1.86-3.5c0.31-0.58,0.64-1.16,0.98-1.73c0.32-0.57,0.66-1.14,1.01-1.7 c0.33-0.56,0.68-1.12,1.04-1.68c0.7-1.12,1.42-2.22,2.18-3.3c0.24-0.37,0.49-0.73,0.76-1.09c0,0,0-0.01,0.01-0.01 c0.33-0.49,0.68-0.96,1.04-1.45c0.26-0.37,0.54-0.75,0.83-1.11c0.05-0.06,0.09-0.13,0.14-0.19c0.23-0.32,0.46-0.62,0.71-0.93 c0.8-1.04,1.62-2.06,2.47-3.07c0.39-0.48,0.8-0.96,1.22-1.43c0.03-0.04,0.06-0.08,0.1-0.12c0.33-0.38,0.66-0.76,1-1.13 c0.69-0.78,1.39-1.54,2.11-2.28c0.27-0.3,0.56-0.59,0.84-0.88c0.69-0.71,1.38-1.4,2.09-2.08c0.03-0.04,0.05-0.06,0.08-0.08 c0.59-0.58,1.19-1.15,1.8-1.7c0.11-0.11,0.23-0.22,0.34-0.32c0.45-0.41,0.91-0.82,1.37-1.23c0.5-0.44,1-0.88,1.51-1.31 c11.16-9.48,27.12-10.27,39.64-2.68c0.65,0.4,1.31,0.78,1.98,1.15c0.37,0.21,0.74,0.41,1.11,0.6c1.05,0.57,2.12,1.1,3.2,1.59 c0.22,0.11,0.45,0.21,0.68,0.31c0.39,0.18,0.79,0.35,1.18,0.51c0.49,0.2,0.98,0.4,1.47,0.59c1.29,0.49,2.6,0.94,3.92,1.33 c0.47,0.14,0.95,0.28,1.43,0.4c0.51,0.14,1.02,0.27,1.54,0.39c0.58,0.13,1.15,0.25,1.73,0.37c0.44,0.09,0.88,0.17,1.32,0.24h0.03 c0.43,0.07,0.85,0.14,1.28,0.2c0.03,0,0.05,0.01,0.08,0.01h0.01c0.05,0.01,0.11,0.01,0.16,0.02c0.39,0.06,0.79,0.1,1.18,0.15 c0.41,0.05,0.82,0.09,1.23,0.11c0.12,0.02,0.23,0.03,0.35,0.04c0.32,0.02,0.63,0.04,0.95,0.05c0.32,0.03,0.64,0.04,0.96,0.05 c0.54,0.02,1.09,0.03,1.63,0.03c9.7,0,18.95-3.01,27.41-8.14c12.49-7.56,28.42-6.83,39.56,2.61c0.51,0.43,1.02,0.87,1.52,1.31 c0.38,0.34,0.75,0.67,1.12,1.01c0.98,0.89,1.95,1.8,2.9,2.73c0.57,0.55,1.12,1.11,1.67,1.67c0.61,0.62,1.2,1.25,1.8,1.89 c0.53,0.57,1.06,1.15,1.57,1.74c0.35,0.4,0.7,0.79,1.04,1.19c0.3,0.34,0.59,0.68,0.88,1.03c0.65,0.77,1.28,1.56,1.9,2.35 c0.6,0.76,1.19,1.52,1.77,2.3c0.02,0.03,0.04,0.07,0.07,0.1c0.03,0.04,0.06,0.07,0.08,0.11c0.35,0.45,0.69,0.92,1.01,1.38 c0.39,0.53,0.77,1.07,1.14,1.62c0.38,0.54,0.75,1.09,1.11,1.64c0.33,0.5,0.66,1,0.98,1.51c0.04,0.07,0.08,0.14,0.13,0.21 c0.22,0.34,0.43,0.67,0.63,1.02c0.3,0.47,0.59,0.95,0.87,1.44c0.06,0.09,0.12,0.19,0.17,0.28c0.27,0.44,0.53,0.89,0.77,1.34 c0.2,0.32,0.38,0.65,0.56,0.98c0.45,0.81,0.89,1.63,1.32,2.46c0.14,0.27,0.29,0.55,0.43,0.83c0.15,0.28,0.29,0.56,0.42,0.84 c0.01,0.02,0.02,0.03,0.03,0.05s0.02,0.04,0.03,0.06c0.26,0.53,0.52,1.06,0.77,1.6c0.16,0.32,0.31,0.64,0.45,0.96 c0.33,0.71,0.65,1.42,0.96,2.13c0.3,0.68,0.59,1.37,0.87,2.07c0.29,0.69,0.57,1.39,0.84,2.1c0.07,0.19,0.14,0.38,0.21,0.58 c0.18,0.48,0.36,0.95,0.53,1.43c0.02,0.04,0.03,0.09,0.05,0.13c0.11,0.3,0.22,0.61,0.32,0.92c0.25,0.71,0.49,1.43,0.73,2.16 s0.47,1.47,0.69,2.21c0.18,0.62,0.36,1.23,0.53,1.86c0.13,0.46,0.26,0.92,0.38,1.39c0.04,0.12,0.07,0.25,0.1,0.38 c0.03,0.12,0.06,0.24,0.09,0.37c0.01,0.04,0.02,0.07,0.03,0.11c0.13,0.49,0.26,0.99,0.37,1.49v0.01c0.01,0.04,0.02,0.09,0.03,0.14 c0.02,0.07,0.04,0.15,0.05,0.22c0.14,0.57,0.27,1.14,0.39,1.72c0.11,0.51,0.22,1.02,0.32,1.54c0.09,0.41,0.17,0.81,0.24,1.22 c0.13,0.65,0.24,1.3,0.35,1.96c0.01,0.07,0.03,0.15,0.03,0.23c0.11,0.63,0.21,1.26,0.3,1.9c0.05,0.3,0.09,0.6,0.13,0.91 c0.11,0.72,0.2,1.44,0.28,2.17c0.1,0.86,0.19,1.73,0.27,2.6c34.03-29.12,55.59-72.38,55.59-120.68 C356.121,104.78,329.151,57.06,287.951,28.38z M203.011,191.62h-0.01c-1.87,0.27-3.76,0.41-5.67,0.41 c-34.72,0-62.86-44.68-62.86-79.4c0-34.71,28.14-62.85,62.86-62.85c26.69,0,49.5,16.64,58.61,40.11 c2.74,7.05,4.24,14.72,4.24,22.74C260.181,145.44,235.061,187.13,203.011,191.62z"></path> <rect x="88.102" y="344.873" style="fill:#666666;" width="218.452" height="15"></rect> <rect x="88.102" y="379.662" style="fill:#666666;" width="218.452" height="15"></rect> <path style="opacity:0.23;fill:#F2F2F2;enable-background:new ;" d="M126.161,16.8l-11.09,21.31l-11.83,22.74l-25.96,49.88 l-12.39,23.82l-23.94,46l-0.73,1.41c-1.11-7.56-1.68-15.3-1.68-23.17C38.541,96.68,74.201,42.9,126.161,16.8z"></path> <path style="opacity:0.23;fill:#F2F2F2;enable-background:new ;" d="M356.121,158.79c0,48.3-21.56,91.56-55.59,120.68v0.01 c-27.75,23.75-63.8,38.1-103.2,38.1c-19.26,0-37.73-3.43-54.81-9.72l8.41-16.17l39.93-76.74h0.01l12.13-23.33h0.01l52.93-101.73 l32.01-61.51C329.151,57.06,356.121,104.78,356.121,158.79z"></path> </g> </g></svg>
+    `;
+  }
+});
+
+// Navigate to profile on click
+myProfileEl.onclick = () => location.href="profile.html";
+
     initPresence(user);
     loadAllUsers();
 });
 
-// ---------- LOAD USERS FAST ----------
-function loadAllUsers() {
-    db.ref("users").once("value").then(snap => {
-        const users = snap.val() || {};
-        renderUsers(users);
-        attachPresenceListener();
-        loadLastMessagesBatch(Object.keys(users));
+// ---------- LOAD USERS ----------
+async function loadAllUsers() {
+    const snap = await db.ref("users").once("value");
+    const users = snap.val() || {};
+    renderUsers(users);
+    attachPresenceListener();
+
+    // Load last chat timestamps for current user
+    const lastChatsSnap = await db.ref(`lastChats/${currentUid}`).once("value");
+    const lastChats = lastChatsSnap.val() || {};
+
+    Object.keys(users).forEach(uid => {
+        if (uid === currentUid) return;
+        const rec = userMap.get(uid);
+        if (!rec) return;
+        rec.lastTime = lastChats[uid] || 0; // set last chat timestamp
     });
+
+    loadAllLastMessages(Object.keys(users));
 }
 
 // ---------- RENDER USERS ----------
 function renderUsers(users) {
     membersList.innerHTML = "";
     Object.keys(users).forEach(uid => {
-        if (uid === currentUid) return; // hide self
+        if (uid === currentUid) return;
         const u = users[uid] || {};
         const name = u.name || "Unknown";
         const photo = u.photo || "";
@@ -123,11 +173,12 @@ function renderUsers(users) {
               </div>
               <div class="preview" id="preview-${uid}">Loading...</div>
           </div>
-          <button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 10px;border-radius:8px;color:#012">Chat</button>
+          <button class="openChat" data-uid="${uid}" style="background:transparent;border:none;padding:6px 10px;border-radius:8px;color:#fff;font-weight:600;font-size:10px;font-family:monospace">
+            <svg width="20px" height="20px" viewBox="0 0 50 50" id="Message_And_Communication_Icons" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <g> <polygon points="43.1,11.6 43.1,25.3 31.6,25.3 31.6,27.5 46.5,27.5 46.5,11.6 " style="fill:#4DE0F9;"></polygon> </g> </g> <g> <g> <polygon points="46.2,27.2 31.7,27.2 31.7,26 45,26 45,11.3 21.2,11.3 21.2,18.7 20,18.7 20,10.1 46.2,10.1 " style="fill:#0D5FC3;"></polygon> </g> </g> <g> <g> <polygon points="27.8,21.6 27.8,38.6 23.3,34.6 5.7,34.6 5.7,37.6 26.3,37.6 30.8,41.6 30.8,21.6 " style="fill:#4DE0F9;"></polygon> </g> </g> <g> <g> <path d="M30.4,41.9l-5.3-4.8H4.1V20h26.2V41.9z M5.3,36h20.2l3.6,3.3v-18H5.3V36z" style="fill:#0D5FC3;"></path> </g> </g> <g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="5.9" x="32.9" y="14.3"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="3.3" x="27.4" y="14.3"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="2.4" x="36.4" y="17.9"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="6.6" x="27.4" y="17.9"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="7.3" x="31.5" y="21.5"></rect> </g> </g> </g> <g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="11.4" x="11.4" y="24.6"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="3.6" x="19.3" y="28.2"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="5.7" x="11.4" y="28.2"></rect> </g> </g> <g> <g> <rect height="1.2" style="fill:#0D5FC3;" width="11.4" x="11.4" y="31.9"></rect> </g> </g> </g> </g> </g></svg>
+            </button>
         `;
 
         membersList.appendChild(div);
-
         const rec = { el: div, lastTime: 0 };
         userMap.set(uid, rec);
 
@@ -136,44 +187,48 @@ function renderUsers(users) {
     });
 }
 
-// ---------- BATCH LOAD LAST MESSAGES ----------
-function loadLastMessagesBatch(uids) {
+// ---------- LOAD LAST MESSAGES ----------
+function loadAllLastMessages(uids){
     if (!auth.currentUser) return;
-    const me = auth.currentUser.uid;
-
-    uids.forEach(uid => {
+    const me = currentUid;
+    const promises = uids.map(uid => {
+        if (uid === me) return null;
         const rec = userMap.get(uid);
-        if (!rec) return;
+        if (!rec) return null;
         const chatId = makeChatId(me, uid);
-        db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1).once('value').then(snap => {
-            let lastMsg = null;
-            snap.forEach(c => lastMsg = c.val());
-            updateLastMessage(rec, uid, lastMsg);
-        });
 
-        // attach live listener throttled
-        db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1)
-          .on('child_added', snap => {
-            const msg = snap.val();
-            if (!msg) return;
-            if ((msg.time || 0) >= (rec.lastTime || 0)) {
-                updateLastMessage(rec, uid, msg);
-            }
-        });
+        // Load last message
+        return db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1).once('value')
+          .then(snap => {
+              let lastMsg = null;
+              snap.forEach(c => lastMsg = c.val());
+              updateLastMessage(rec, uid, lastMsg, false);
+              attachLiveListener(rec, uid, chatId);
+          });
     });
+    Promise.all(promises).then(sortUsersByLastMsg);
+}
 
-    // After all last messages loaded, sort by lastTime
-    setTimeout(sortUsersByLastMsg, 200);
+// ---------- LIVE MESSAGE LISTENER ----------
+function attachLiveListener(rec, uid, chatId){
+    db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1)
+      .on('child_added', snap => {
+          const msg = snap.val();
+          if (!msg) return;
+          if ((msg.time || 0) >= (rec.lastTime || 0)) {
+              updateLastMessage(rec, uid, msg, true);
+          }
+    });
 }
 
 // ---------- UPDATE LAST MESSAGE ----------
-function updateLastMessage(rec, uid, msg) {
+function updateLastMessage(rec, uid, msg, updateLastChat=true){
     const previewEl = rec.el.querySelector(`#preview-${uid}`);
     const timeEl = rec.el.querySelector(`#time-${uid}`);
     if (!msg) {
         previewEl.textContent = "No messages yet";
         timeEl.textContent = "";
-        rec.lastTime = 0;
+        rec.lastTime = rec.lastTime || 0;
         return;
     }
 
@@ -183,15 +238,20 @@ function updateLastMessage(rec, uid, msg) {
     else text = (msg.sender===currentUid?"You: ":"") + (msg.text||"");
 
     previewEl.textContent = text.length>60 ? text.slice(0,57)+"..." : text;
-    timeEl.textContent = msg.time ? new Date(msg.time).toLocaleTimeString() : "";
-    rec.lastTime = msg.time || 0;
 
-    // move user to top
+    const fullTime = msg.time || Date.now();
+    timeEl.textContent = new Date(fullTime).toLocaleString(); // show date + time
+    rec.lastTime = fullTime;
+
+    // persist last chat timestamp
+    if (updateLastChat) db.ref(`lastChats/${currentUid}/${uid}`).set(fullTime);
+
+    // move to top
     if (rec.el.parentNode) rec.el.parentNode.prepend(rec.el);
 }
 
 // ---------- SORT USERS ----------
-function sortUsersByLastMsg() {
+function sortUsersByLastMsg(){
     const sorted = Array.from(userMap.values()).sort((a,b)=> (b.lastTime||0)-(a.lastTime||0));
     sorted.forEach(rec => membersList.appendChild(rec.el));
 }
@@ -219,11 +279,10 @@ function initPresence(user){
             presenceRef.onDisconnect().set({ online:false, lastSeen:Date.now(), name:user.displayName||"" });
         }
     });
-
     setInterval(()=>presenceRef.update({ lastSeen:Date.now() }), 1_000);
 }
 
-function attachPresenceListener() {
+function attachPresenceListener(){
     if (presenceListenerAttached) return;
     presenceListenerAttached = true;
     db.ref("presence").on("value", snap => {
@@ -233,7 +292,9 @@ function attachPresenceListener() {
             if (!rec) return;
             const timeEl = rec.el.querySelector(".meta-time");
             if (!timeEl) return;
-            timeEl.textContent = pres[uid].online ? "Online" : "Last seen " + new Date(pres[uid].lastSeen||Date.now()).toLocaleTimeString();
+            timeEl.textContent = pres[uid].online 
+                ? "Online" 
+                : "Last seen " + new Date(pres[uid].lastSeen||Date.now()).toLocaleString();
         });
     });
 }
@@ -241,13 +302,64 @@ function attachPresenceListener() {
 // ---------- CHAT ----------
 function makeChatId(a,b){ return [a,b].sort().join("_"); }
 function openChatWith(uid){
-    const myId = auth.currentUser?.uid;
+    const myId = currentUid;
     if (!myId) return;
     const chatId = makeChatId(myId, uid);
     db.ref("chatMembers/"+chatId+"/"+myId).set(true);
     db.ref("chatMembers/"+chatId+"/"+uid).set(true);
+    // update last chat timestamp
+    db.ref(`lastChats/${currentUid}/${uid}`).set(Date.now());
     location.href = `chat.html?chatId=${chatId}&other=${uid}`;
 }
+
+
+// ---------- SHOW/HIDE LOADING ----------
+function showLoading(text="Loading..."){
+    const el = document.getElementById("loadingOverlay");
+    if(el){
+        el.style.display = "flex";
+        el.textContent = text;
+    }
+}
+function hideLoading(){
+    const el = document.getElementById("loadingOverlay");
+    if(el) el.style.display = "none";
+}
+
+// ---------- LOAD USERS ----------
+async function loadAllUsers() {
+    showLoading("Fetching users...");
+    try {
+        const snap = await db.ref("users").once("value");
+        const users = snap.val() || {};
+        renderUsers(users);
+        attachPresenceListener();
+
+        // Load last chat timestamps for current user
+        showLoading("Fetching last chat info...");
+        const lastChatsSnap = await db.ref(`lastChats/${currentUid}`).once("value");
+        const lastChats = lastChatsSnap.val() || {};
+
+        Object.keys(users).forEach(uid => {
+            if (uid === currentUid) return;
+            const rec = userMap.get(uid);
+            if (!rec) return;
+            rec.lastTime = lastChats[uid] || 0; // set last chat timestamp
+        });
+
+        showLoading("Loading last messages...");
+        await loadAllLastMessages(Object.keys(users));
+
+    } catch(err){
+        console.error("Error loading users:", err);
+        alert("Failed to load users.");
+    } finally {
+        hideLoading();
+    }
+}
+
+
+
 
 </script>
 </body>

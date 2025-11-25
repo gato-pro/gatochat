@@ -43,6 +43,11 @@ body{
 
   <button id="btnLogin" class="btn">Log in</button>
 
+  <div class="small">
+    Forgot your password? 
+    <span id="forgotLink" class="link">Reset here</span>
+  </div>
+
   <div class="small">No account?  
      <span class="link" onclick="location.href='signup.html'">Create one</span>
   </div>
@@ -77,6 +82,7 @@ const db = firebase.database();
 <script>
 const errEl = document.getElementById("error");
 
+// Login button
 document.getElementById("btnLogin").addEventListener("click", async () => {
     errEl.style.display = "none";
 
@@ -99,6 +105,29 @@ document.getElementById("btnLogin").addEventListener("click", async () => {
         location.href = "members.html";
 
     } catch (e) {
+        errEl.innerText = e.message;
+        errEl.style.display = "block";
+    }
+});
+
+// Forgot password link
+document.getElementById("forgotLink").addEventListener("click", async () => {
+    errEl.style.display = "none";
+    const email = document.getElementById("email").value.trim();
+
+    if (!email) {
+        errEl.innerText = "Enter your email to reset password";
+        errEl.style.display = "block";
+        return;
+    }
+
+    try {
+        await auth.sendPasswordResetEmail(email);
+        errEl.style.color = "#6bff6b";
+        errEl.innerText = "Password reset email sent! Check your inbox.";
+        errEl.style.display = "block";
+    } catch (e) {
+        errEl.style.color = "#ff6b6b";
         errEl.innerText = e.message;
         errEl.style.display = "block";
     }
