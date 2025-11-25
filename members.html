@@ -16,7 +16,8 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226
 .search{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff;margin-bottom:12px}
 .list{margin-top:12px;display:grid;gap:8px}
 .user{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);cursor:pointer;position:relative}
-.avatar{width:44px;height:44px;border-radius:10px;background:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px}
+.avatar{width:44px;height:44px;border-radius:10px;background:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
 .name{font-weight:600}
 .status-text{font-size:12px;color:#9aa8bb}
 .status-dot{width:10px;height:10px;border-radius:50%}
@@ -26,6 +27,8 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226
 .preview.you{color:#a6d8ff}
 .preview.deleted{color:#a7a7a7;font-style:italic}
 .preview-type{margin-right:6px}
+.top-actions{display:flex;gap:8px;align-items:center}
+.profile-btn{background:#06b6d4;color:#012;padding:8px;border-radius:8px;border:none;cursor:pointer}
 @media (max-width:600px){.header{flex-direction:column;gap:12px}.preview{max-width:160px}}
 </style>
 </head>
@@ -33,8 +36,9 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226
 <body>
 <div class="header">
   <div class="title">Chat — Members</div>
-  <div>
-    <button id="btnGlobal" class="signout" style="margin-right:8px;background:#06b6d4;color:#012">Global</button>
+  <div class="top-actions">
+    <button id="btnProfile" class="profile-btn" style="margin-right:8px">My Profile</button>
+    <button id="btnGlobal" class="profile-btn" style="background:#06b6d4;color:#012">Global</button>
     <button id="btnSignOut" class="signout">Sign out</button>
   </div>
 </div>
@@ -52,7 +56,7 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071428,#081226
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script>
-// Firebase config
+// ---------- CONFIG ----------
 const firebaseConfig = {
     apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
     authDomain: "gatochat-56ab6.firebaseapp.com",
@@ -63,304 +67,187 @@ const firebaseConfig = {
     appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
 };
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.database();
 
+// ---------- DOM ----------
 const search = document.getElementById("search");
 const membersList = document.getElementById("membersList");
 const btnSignOut = document.getElementById("btnSignOut");
 const btnGlobal = document.getElementById("btnGlobal");
+const btnProfile = document.getElementById("btnProfile");
 
-// Keep a map of userId -> element and lastMessageTimestamp
-const userMap = new Map(); // uid => { el, lastTime, listeners: [] }
+// ---------- STATE ----------
+const userMap = new Map(); // uid -> { el, lastTime }
 let currentUid = null;
+let presenceListenerAttached = false;
 
-// Check auth
+// ---------- AUTH ----------
 auth.onAuthStateChanged(user => {
-  if (!user) return location.href = "index.html";
-  currentUid = user.uid;
-
-  // presence system for this user
-  const presenceRef = db.ref("presence/" + currentUid);
-  const connectedRef = db.ref(".info/connected");
-  connectedRef.on("value", snap => {
-    if (snap.val() === true) {
-      presenceRef.set({
-        online: true,
-        lastSeen: Date.now(),
-        name: user.displayName || ""
-      });
-      presenceRef.onDisconnect().set({
-        online: false,
-        lastSeen: Date.now(),
-        name: user.displayName || ""
-      });
-    }
-  });
-
-  // load all users from DB
-  db.ref("users").on("value", snap => {
-    const users = snap.val() || {};
-    renderUsers(users, currentUid);
-  });
+    if (!user) return location.href = "index.html";
+    currentUid = user.uid;
+    initPresence(user);
+    loadAllUsers();
 });
 
-// Render users (create DOM entries)
-function renderUsers(users, myUid) {
-  // Clean up existing listeners for removed users
-  // We'll keep listeners for active users but remove listeners for users not present
-  const existingUids = new Set(Object.keys(users));
-
-  // remove DOM for users that no longer exist
-  for (const [uid, entry] of userMap.entries()) {
-    if (!existingUids.has(uid)) {
-      // remove listeners
-      if (entry.listeners) entry.listeners.forEach(fn => fn.off && fn.off());
-      if (entry.el && entry.el.parentNode) entry.el.remove();
-      userMap.delete(uid);
-    }
-  }
-
-  // Render / update all users
-  Object.keys(users).forEach(uid => {
-    const u = users[uid];
-
-    if (userMap.has(uid)) {
-      // update name/avatar if changed
-      const rec = userMap.get(uid);
-      rec.el.querySelector(".name").textContent = u.name || "Unknown";
-      if (u.avatar) {
-        rec.el.querySelector(".avatar").innerHTML = `<img src="${u.avatar}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">`;
-      } else {
-        rec.el.querySelector(".avatar").textContent = u.name ? u.name[0].toUpperCase() : "?";
-      }
-      return;
-    }
-
-    // Create element
-    const div = document.createElement("div");
-    div.className = "user";
-    div.dataset.name = u.name || "Unknown";
-    div.dataset.uid = uid;
-
-    div.innerHTML = `
-      <div class="avatar">${ u.avatar ? `<img src="${u.avatar}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">` : (u.name ? u.name[0].toUpperCase() : "?") }</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="name">${u.name || "Unknown"}</div>
-          <div class="meta-time" id="time-${uid}"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <div class="preview" id="preview-${uid}">No messages yet</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        ${ uid !== myUid ? `<button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 8px;border-radius:8px;color:#012">Chat</button>` : `<span style="font-size:12px;color:#9aa8bb">You</span>` }
-      </div>
-    `;
-
-    // Append to list
-    membersList.appendChild(div);
-
-    // Save in map
-    userMap.set(uid, { el: div, lastTime: 0, listeners: [] });
-
-    // Add click handler for the entire card (optional: also clicking avatar/name opens chat)
-    div.addEventListener('click', (ev) => {
-      // avoid firing when clicking the chat button itself
-      if (ev.target && (ev.target.classList.contains('openChat') || ev.target.closest('.openChat'))) return;
-      if (uid === myUid) return;
-      openChatWith(uid);
+// ---------- LOAD USERS FAST ----------
+function loadAllUsers() {
+    db.ref("users").once("value").then(snap => {
+        const users = snap.val() || {};
+        renderUsers(users);
+        attachPresenceListener();
+        loadLastMessagesBatch(Object.keys(users));
     });
-  });
+}
 
-  // Update presence text
-  db.ref("presence").on("value", snap => {
-    const pres = snap.val() || {};
-    Object.keys(pres).forEach(uid => {
-      const timeEl = document.getElementById("time-" + uid);
-      const previewEl = document.getElementById("preview-" + uid);
-      if (timeEl && pres[uid]) {
-        if (pres[uid].online) {
-          timeEl.textContent = "Online";
-          if (previewEl) previewEl.textContent = previewEl.dataset && previewEl.dataset.raw ? previewEl.dataset.raw : previewEl.textContent;
-        } else {
-          const t = new Date(pres[uid].lastSeen || Date.now()).toLocaleTimeString();
-          // keep time displayed in time element only if there's no recent message time
-          // (we'll overwrite when latest message arrives)
-          if (!userMap.has(uid) || (userMap.get(uid) && (!userMap.get(uid).lastTime || userMap.get(uid).lastTime === 0))) {
-            timeEl.textContent = `Last seen ${t}`;
-          }
-        }
-      }
+// ---------- RENDER USERS ----------
+function renderUsers(users) {
+    membersList.innerHTML = "";
+    Object.keys(users).forEach(uid => {
+        if (uid === currentUid) return; // hide self
+        const u = users[uid] || {};
+        const name = u.name || "Unknown";
+        const photo = u.photo || "";
+
+        const div = document.createElement("div");
+        div.className = "user";
+        div.dataset.uid = uid;
+        div.dataset.name = name.toLowerCase();
+
+        div.innerHTML = `
+          <div class="avatar">${photo ? `<img src="${photo}" alt="avatar">` : (name[0]||"?")}</div>
+          <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="name">${name}</div>
+                  <div class="meta-time" id="time-${uid}"></div>
+              </div>
+              <div class="preview" id="preview-${uid}">Loading...</div>
+          </div>
+          <button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 10px;border-radius:8px;color:#012">Chat</button>
+        `;
+
+        membersList.appendChild(div);
+
+        const rec = { el: div, lastTime: 0 };
+        userMap.set(uid, rec);
+
+        div.querySelector(".openChat").onclick = e => { e.stopPropagation(); openChatWith(uid); };
+        div.onclick = e => { if (!e.target.closest('.openChat')) openChatWith(uid); };
     });
-  });
+}
 
-  // For each user, attach listeners to their chat message node to fetch last message and subscribe
-  for (const [uid, rec] of userMap.entries()) {
-    // Skip listening to itself
-    if (uid === currentUid) continue;
+// ---------- BATCH LOAD LAST MESSAGES ----------
+function loadLastMessagesBatch(uids) {
+    if (!auth.currentUser) return;
+    const me = auth.currentUser.uid;
 
-    // set up listeners only once
-    if (rec._listenersAttached) continue;
-    rec._listenersAttached = true;
+    uids.forEach(uid => {
+        const rec = userMap.get(uid);
+        if (!rec) return;
+        const chatId = makeChatId(me, uid);
+        db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1).once('value').then(snap => {
+            let lastMsg = null;
+            snap.forEach(c => lastMsg = c.val());
+            updateLastMessage(rec, uid, lastMsg);
+        });
 
-    const chatId = makeChatId(currentUid, uid);
+        // attach live listener throttled
+        db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1)
+          .on('child_added', snap => {
+            const msg = snap.val();
+            if (!msg) return;
+            if ((msg.time || 0) >= (rec.lastTime || 0)) {
+                updateLastMessage(rec, uid, msg);
+            }
+        });
+    });
 
-    // helper to update preview and time and reorder
-    const handleNewLastMsg = (msgObj) => {
-      if (!msgObj) {
-        // no messages yet
-        const previewEl = document.getElementById("preview-" + uid);
-        const timeEl = document.getElementById("time-" + uid);
-        if (previewEl) {
-          previewEl.textContent = "No messages yet";
-          previewEl.dataset.raw = "No messages yet";
-        }
-        if (timeEl && (!rec.lastTime || rec.lastTime === 0)) {
-          timeEl.textContent = "";
-        }
+    // After all last messages loaded, sort by lastTime
+    setTimeout(sortUsersByLastMsg, 200);
+}
+
+// ---------- UPDATE LAST MESSAGE ----------
+function updateLastMessage(rec, uid, msg) {
+    const previewEl = rec.el.querySelector(`#preview-${uid}`);
+    const timeEl = rec.el.querySelector(`#time-${uid}`);
+    if (!msg) {
+        previewEl.textContent = "No messages yet";
+        timeEl.textContent = "";
         rec.lastTime = 0;
         return;
-      }
-
-      // msgObj structure: { id, text, uid/name, time, type?, reply? }
-      const previewEl = document.getElementById("preview-" + uid);
-      const timeEl = document.getElementById("time-" + uid);
-      if (!previewEl || !timeEl) return;
-
-      // choose preview text based on type and deleted
-      let previewText = "";
-      if (msgObj.deleted || msgObj.type === 'deleted') {
-        previewText = "Message deleted";
-        previewEl.classList.add('preview', 'deleted');
-      } else if (msgObj.type && msgObj.type !== 'text') {
-        // show type icons
-        const t = msgObj.type;
-        if (t === 'image' || t === 'photo') previewText = "📷 Photo";
-        else if (t === 'voice' || t === 'audio') previewText = "🎤 Voice message";
-        else if (t === 'sticker') previewText = "Sticker";
-        else previewText = t;
-        previewEl.classList.remove('you');
-        previewEl.classList.remove('deleted');
-      } else if (msgObj.reply && msgObj.reply.text) {
-        // show reply small preview
-        const rName = msgObj.reply.name || (msgObj.reply.sender === currentUid ? 'You' : 'User');
-        previewText = `${rName}: ${msgObj.reply.text}`;
-        previewEl.classList.remove('deleted');
-      } else {
-        // normal text
-        const who = (msgObj.uid === currentUid) ? "You: " : "";
-        previewText = who + (msgObj.text || '');
-        if (who) previewEl.classList.add('you'); else previewEl.classList.remove('you');
-        previewEl.classList.remove('deleted');
-      }
-
-      // truncate preview to a reasonable length
-      const truncated = previewText.length > 60 ? previewText.slice(0,57) + '...' : previewText;
-      previewEl.textContent = truncated;
-      previewEl.dataset.raw = previewText;
-
-      // time
-      const timeStr = msgObj.time ? new Date(msgObj.time).toLocaleTimeString() : '';
-      timeEl.textContent = timeStr;
-
-      // remember lastTime
-      rec.lastTime = msgObj.time || 0;
-
-      // reorder this user's card to top
-      const node = rec.el;
-      if (node && node.parentNode) {
-        node.parentNode.prepend(node);
-      }
-    };
-
-    // Use two possible paths to be safe: privateChates (your mention) and privateChats
-    // We'll query both and use the message with the largest time. Also subscribe to child_added to update live.
-
-    const pathCandidates = [
-      `privateChates/${chatId}/messages`,
-      `privateChats/${chatId}/messages`
-    ];
-
-    // initial fetch of last message (check both)
-    (async () => {
-      try {
-        let bestMsg = null;
-        for (const p of pathCandidates) {
-          const snap = await db.ref(p).orderByChild('time').limitToLast(1).once('value');
-          snap.forEach(ch => {
-            const obj = ch.val();
-            obj.id = ch.key;
-            // prefer highest time
-            if (!bestMsg || (obj.time || 0) > (bestMsg.time || 0)) bestMsg = obj;
-          });
-        }
-        handleNewLastMsg(bestMsg);
-      } catch (err) {
-        console.warn("Error fetching last message for", chatId, err);
-      }
-    })();
-
-    // subscribe for live additions on both paths
-    for (const p of pathCandidates) {
-      try {
-        const ref = db.ref(p);
-        // child_added for new messages
-        const onChildAdded = ref.orderByChild('time').limitToLast(1).on('child_added', snap => {
-          const obj = snap.val();
-          obj.id = snap.key;
-          // we may get many updates from both paths; pick whichever has newer time
-          // convert current known lastTime
-          const prev = rec.lastTime || 0;
-          const gotTime = obj.time || 0;
-          if (gotTime >= prev) {
-            handleNewLastMsg(obj);
-          }
-        });
-        // push listener so we can turn it off later if needed
-        rec.listeners.push(ref);
-      } catch (err) {
-        console.warn("subscribe error", p, err);
-      }
     }
-  }
 
-  // add chat button handlers (re-register)
-  [...document.getElementsByClassName("openChat")].forEach(btn => {
-    btn.onclick = () => {
-      const otherUid = btn.dataset.uid;
-      const myId = auth.currentUser.uid;
-      const chatId = makeChatId(myId, otherUid);
+    let text = "";
+    if (msg.deleted || msg.type==='deleted') text = "Message deleted";
+    else if (msg.reply && msg.reply.text) text = `${msg.reply.sender===currentUid?'You':msg.reply.senderName||'User'}: ${msg.reply.text}`;
+    else text = (msg.sender===currentUid?"You: ":"") + (msg.text||"");
 
-      db.ref("chatMembers/" + chatId + "/" + myId).set(true);
-      db.ref("chatMembers/" + chatId + "/" + otherUid).set(true);
+    previewEl.textContent = text.length>60 ? text.slice(0,57)+"..." : text;
+    timeEl.textContent = msg.time ? new Date(msg.time).toLocaleTimeString() : "";
+    rec.lastTime = msg.time || 0;
 
-      location.href = `chat.html?chatId=${chatId}&other=${otherUid}`;
-    };
-  });
-
-  // Keep search filtering working
-  search.dispatchEvent(new Event('input'));
+    // move user to top
+    if (rec.el.parentNode) rec.el.parentNode.prepend(rec.el);
 }
 
-// utility to create unique chat ID
-function makeChatId(a,b){
-  return [a,b].sort().join("_");
+// ---------- SORT USERS ----------
+function sortUsersByLastMsg() {
+    const sorted = Array.from(userMap.values()).sort((a,b)=> (b.lastTime||0)-(a.lastTime||0));
+    sorted.forEach(rec => membersList.appendChild(rec.el));
 }
 
-// search members
+// ---------- SEARCH ----------
 search.addEventListener("input", () => {
-  const q = search.value.toLowerCase();
-  [...membersList.children].forEach(el => {
-    el.style.display = el.dataset.name.toLowerCase().includes(q) ? "" : "none";
-  });
+    const q = (search.value||"").toLowerCase();
+    [...membersList.children].forEach(el => el.style.display = el.dataset.name.includes(q) ? "" : "none");
 });
 
-// buttons
+// ---------- NAV ----------
 btnSignOut.onclick = async () => { await auth.signOut(); location.href="index.html"; }
 btnGlobal.onclick = () => { location.href="global.html"; }
+btnProfile.onclick = () => { location.href="profile.html"; }
+
+// ---------- PRESENCE ----------
+function initPresence(user){
+    const uid = user.uid;
+    const presenceRef = db.ref("presence/" + uid);
+    const connectedRef = db.ref(".info/connected");
+
+    connectedRef.on("value", snap => {
+        if (snap.val() === true) {
+            presenceRef.set({ online:true, lastSeen:Date.now(), name:user.displayName||"" });
+            presenceRef.onDisconnect().set({ online:false, lastSeen:Date.now(), name:user.displayName||"" });
+        }
+    });
+
+    setInterval(()=>presenceRef.update({ lastSeen:Date.now() }), 1_000);
+}
+
+function attachPresenceListener() {
+    if (presenceListenerAttached) return;
+    presenceListenerAttached = true;
+    db.ref("presence").on("value", snap => {
+        const pres = snap.val() || {};
+        Object.keys(pres).forEach(uid => {
+            const rec = userMap.get(uid);
+            if (!rec) return;
+            const timeEl = rec.el.querySelector(".meta-time");
+            if (!timeEl) return;
+            timeEl.textContent = pres[uid].online ? "Online" : "Last seen " + new Date(pres[uid].lastSeen||Date.now()).toLocaleTimeString();
+        });
+    });
+}
+
+// ---------- CHAT ----------
+function makeChatId(a,b){ return [a,b].sort().join("_"); }
+function openChatWith(uid){
+    const myId = auth.currentUser?.uid;
+    if (!myId) return;
+    const chatId = makeChatId(myId, uid);
+    db.ref("chatMembers/"+chatId+"/"+myId).set(true);
+    db.ref("chatMembers/"+chatId+"/"+uid).set(true);
+    location.href = `chat.html?chatId=${chatId}&other=${uid}`;
+}
 
 </script>
 </body>

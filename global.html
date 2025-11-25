@@ -122,19 +122,48 @@ const db = firebase.database();
 
 let currentUser = null;
 let replyingTo = null; // { id, name, text }
+const userMap = new Map();
+let presenceListenerAttached = false;
 
+/* ================= AUTH CHECK ================= */
 auth.onAuthStateChanged(user => {
   if (!user) return location.href = 'login.html';
   currentUser = user;
-  initGlobal(user);
+
+  // initialize presence
+  initPresence(user);
+
+  // initialize current page
+  if (window.location.pathname.endsWith("chat.html")) initChat(user);
+  else if (window.location.pathname.endsWith("members.html")) renderUsersPage(user);
+  else if (window.location.pathname.endsWith("global.html")) initGlobal(user);
 });
 
+/* ================== PRESENCE ================== */
+function initPresence(user) {
+  const uid = user.uid;
+  const presenceRef = db.ref("presence/" + uid);
+  const connectedRef = db.ref(".info/connected");
+
+  connectedRef.on("value", snap => {
+    if (snap.val() === true) {
+      // mark online
+      presenceRef.set({ online:true, lastSeen:Date.now(), name:user.displayName || "" });
+      // automatically mark offline if disconnected
+      presenceRef.onDisconnect().set({ online:false, lastSeen:Date.now(), name:user.displayName || "" });
+    }
+  });
+
+  // heartbeat to refresh lastSeen every 30s
+  setInterval(() => presenceRef.update({ lastSeen: Date.now() }), 30_000);
+}
+
+/* ================== GLOBAL CHAT ================== */
 function initGlobal(user){
   const msgEl = document.getElementById("messages");
   const textInput = document.getElementById("text");
   const sendBtn = document.getElementById("btnSend");
 
-  // track rendered ids
   const rendered = new Set();
 
   // Load last 50 messages
@@ -142,26 +171,22 @@ function initGlobal(user){
     msgEl.innerHTML = '';
     snap.forEach(child => {
       const id = child.key;
-      const m = child.val();
-      renderMessage(id, m, user.uid, rendered);
+      renderMessage(id, child.val(), user.uid, rendered);
     });
     msgEl.scrollTop = msgEl.scrollHeight;
   });
 
-  // realtime child_added
+  // Realtime child_added
   db.ref("global/messages").limitToLast(50).orderByChild('time').on("child_added", snap=>{
     const id = snap.key;
     if (rendered.has(id)) return;
-    const m = snap.val();
-    renderMessage(id, m, user.uid, rendered);
-    // small timeout to ensure DOM appended before scrolling
+    renderMessage(id, snap.val(), user.uid, rendered);
     setTimeout(()=> msgEl.scrollTop = msgEl.scrollHeight, 50);
   });
 
-  // child_removed -> show "Message deleted" placeholder
+  // child_removed
   db.ref("global/messages").on("child_removed", snap => {
-    const id = snap.key;
-    const el = document.querySelector(`[data-msgid="${id}"]`);
+    const el = document.querySelector(`[data-msgid="${snap.key}"]`);
     if (el) {
       const placeholder = document.createElement('div');
       placeholder.className = 'msg';
@@ -171,211 +196,24 @@ function initGlobal(user){
       placeholder.innerHTML = `<div class="meta">${new Date().toLocaleTimeString()}</div><div>Message deleted</div>`;
       el.replaceWith(placeholder);
     }
-    rendered.delete(id);
+    rendered.delete(snap.key);
   });
 
-  // Sending
-  sendBtn.onclick = () => sendMessage(user);
-
-  // Enter to send, Shift+Enter newline
-  textInput.addEventListener('keydown', (e) => {
+  // send message
+  sendBtn.onclick = () => sendMessage(user, textInput);
+  textInput.addEventListener('keydown', (e)=>{
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(user);
+      sendMessage(user, textInput);
     }
   });
 
-  // cancel reply
   document.getElementById('cancelReply').addEventListener('click', clearReplyPreview);
 }
 
-/* ========== RENDER MESSAGE ========== */
-function renderMessage(id, m, myUid, renderedSet){
-  const messagesEl = document.getElementById("messages");
-  const div = document.createElement('div');
-  div.className = 'msg' + (m.uid === myUid ? ' me' : '');
-  div.setAttribute('data-msgid', id);
-
-  // Build inner HTML, include reply block if present my reply/message with line 
-  let replyHtml = '';
-    if (m.reply && m.reply.text) {
-    replyHtml = `
-      <div style="border-left:3px solid #4da3ff;padding-left:10px;margin-bottom:6px;">
-        <div style="font-weight:600;color:#4da3ff;font-size:13px;margin-bottom:2px;">
-          ${escape(m.reply.name || 'Unknown')}
-        </div>
-        <div style="color:var(--muted);font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${escape(m.reply.text)}
-        </div>
-      </div>
-    `;
-  }
-
-
-  // message text (or deleted marker if flagged)
-  let textHtml = `<div class="text">${escape(m.text || '')}</div>`;
-
-  // meta line
-  const meta = `<div class="meta">${escape(m.name || 'User')} — ${new Date(m.time || Date.now()).toLocaleTimeString()}</div>`;
-
-  div.innerHTML = `${meta}${replyHtml}${textHtml}`;
-
-  // Add long-press / right-click behavior for context menu (Reply/Delete)
-  enableLongPressAndContext(div, id, m, myUid);
-
-  messagesEl.appendChild(div);
-  renderedSet && renderedSet.add(id);
-}
-
-/* ========== LONG-PRESS / CONTEXT MENU ========== */
-function enableLongPressAndContext(el, msgId, messageData, myUid) {
-  let timer = null;
-  const LONG_MS = 600;
-  let longPressed = false;
-
-  const start = (x, y) => {
-    timer = setTimeout(() => {
-      longPressed = true;
-      el.classList.add('longpressing');
-      showActionMenu(x, y, msgId, messageData, myUid);
-    }, LONG_MS);
-  };
-  const cancel = () => {
-    if (timer) clearTimeout(timer);
-    timer = null;
-    if (longPressed) {
-      longPressed = false;
-      el.classList.remove('longpressing');
-    }
-  };
-
-  // touch
-  el.addEventListener('touchstart', (ev) => {
-    const t = ev.touches && ev.touches[0];
-    if (t) start(t.clientX, t.clientY);
-  }, {passive:true});
-  el.addEventListener('touchend', cancel);
-  el.addEventListener('touchmove', cancel);
-  el.addEventListener('touchcancel', cancel);
-
-  // mouse: right click
-  el.addEventListener('contextmenu', (ev) => {
-    ev.preventDefault();
-    showActionMenu(ev.clientX, ev.clientY, msgId, messageData, myUid);
-    return false;
-  });
-
-  // mouse: optional long left-click
-  el.addEventListener('mousedown', (ev) => {
-    if (ev.button !== 0) return;
-    start(ev.clientX, ev.clientY);
-  });
-  el.addEventListener('mouseup', cancel);
-  el.addEventListener('mouseleave', cancel);
-}
-
-/* ========== ACTION MENU (floating) ========== */
-let activeCtx = null;
-function showActionMenu(x, y, msgId, messageData, myUid) {
-  hideActionMenu();
-
-  const menu = document.createElement('div');
-  menu.className = 'ctxMenu';
-  menu.style.left = (x + 6) + 'px';
-  menu.style.top = (y + 6) + 'px';
-
-  // Reply (always available)
-  const replyBtn = document.createElement('button');
-  replyBtn.className = 'ctxItem';
-  replyBtn.innerText = 'Reply';
-  replyBtn.onclick = () => {
-    hideActionMenu();
-    openReplyPreview(msgId, messageData);
-  };
-  menu.appendChild(replyBtn);
-
-  // Delete (only if owner)
-  if (messageData.uid === myUid) {
-    const delBtn = document.createElement('button');
-    delBtn.className = 'ctxItem delete';
-    delBtn.innerText = 'Delete';
-    delBtn.onclick = async () => {
-      hideActionMenu();
-      const ok = confirm("Delete this message?");
-      if (!ok) return;
-      try {
-        await db.ref("global/messages/" + msgId).remove();
-      } catch (err) {
-        console.error("delete failed", err);
-        alert("Could not delete message. Check console.");
-      }
-    };
-    menu.appendChild(delBtn);
-  }
-
-  // Cancel
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'ctxItem';
-  cancelBtn.innerText = 'Cancel';
-  cancelBtn.onclick = hideActionMenu;
-  menu.appendChild(cancelBtn);
-
-  document.body.appendChild(menu);
-  activeCtx = menu;
-
-  // reposition if overflow
-  const rect = menu.getBoundingClientRect();
-  const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-  const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-  if (rect.right > vw) menu.style.left = (vw - rect.width - 12) + 'px';
-  if (rect.bottom > vh) menu.style.top = (vh - rect.height - 12) + 'px';
-
-  setTimeout(() => {
-    window.addEventListener('click', outsideClickClose);
-    window.addEventListener('resize', hideActionMenu);
-    window.addEventListener('scroll', hideActionMenu, true);
-  }, 50);
-}
-function hideActionMenu() {
-  if (activeCtx) {
-    activeCtx.remove();
-    activeCtx = null;
-    window.removeEventListener('click', outsideClickClose);
-    window.removeEventListener('resize', hideActionMenu);
-    window.removeEventListener('scroll', hideActionMenu, true);
-    document.querySelectorAll('.msg.longpressing').forEach(el => el.classList.remove('longpressing'));
-  }
-}
-function outsideClickClose(e) {
-  if (!activeCtx) return;
-  if (!activeCtx.contains(e.target)) hideActionMenu();
-}
-
-/* ========== REPLY PREVIEW ========== */
-function openReplyPreview(msgId, messageData) {
-  // messageData may be undefined in rare cases; guard
-  if (!messageData) return;
-  replyingTo = {
-    id: msgId,
-    name: messageData.name || 'Unknown',
-    text: (messageData.text||'').slice(0, 300)
-  };
-  document.getElementById('replyName').innerText = replyingTo.name;
-  document.getElementById('replyText').innerText = replyingTo.text;
-  document.getElementById('replyPreview').style.display = 'flex';
-  document.getElementById('text').focus();
-}
-function clearReplyPreview(){
-  replyingTo = null;
-  document.getElementById('replyPreview').style.display = 'none';
-  document.getElementById('replyName').innerText = '';
-  document.getElementById('replyText').innerText = '';
-}
-
-/* ========== SEND MESSAGE (includes reply metadata if any) ========== */
-function sendMessage(user){
-  const box = document.getElementById('text');
-  const txt = box.value.trim();
+/* ================== SEND MESSAGE ================== */
+function sendMessage(user, textInput){
+  const txt = textInput.value.trim();
   if (!txt) return;
 
   const payload = {
@@ -386,36 +224,201 @@ function sendMessage(user){
   };
 
   if (replyingTo) {
-    payload.reply = {
-      id: replyingTo.id,
-      name: replyingTo.name,
-      text: replyingTo.text
-    };
+    payload.reply = { id: replyingTo.id, name: replyingTo.name, text: replyingTo.text };
   }
 
   db.ref("global/messages").push(payload)
-    .then(() => {
-      box.value = '';
-      clearReplyPreview();
-    }).catch(err => {
-      console.error("send failed", err);
-      alert("Could not send message. Check console.");
+    .then(()=> { textInput.value=''; clearReplyPreview(); })
+    .catch(err=> { console.error(err); alert("Send failed"); });
+}
+
+/* ================== RENDER MESSAGE ================== */
+function renderMessage(id, m, myUid, renderedSet){
+  const messagesEl = document.getElementById("messages");
+  const div = document.createElement('div');
+  div.className = 'msg' + (m.uid === myUid ? ' me' : '');
+  div.setAttribute('data-msgid', id);
+
+  let replyHtml = '';
+  if (m.reply && m.reply.text){
+    replyHtml = `<div style="border-left:3px solid #4da3ff;padding-left:10px;margin-bottom:6px;">
+      <div style="font-weight:600;color:#4da3ff;font-size:13px;margin-bottom:2px;">
+        ${escape(m.reply.name || 'Unknown')}
+      </div>
+      <div style="color:var(--muted);font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${escape(m.reply.text)}
+      </div>
+    </div>`;
+  }
+
+  const textHtml = `<div class="text">${escape(m.text || '')}</div>`;
+  const meta = `<div class="meta">${escape(m.name || 'User')} — ${new Date(m.time || Date.now()).toLocaleTimeString()}</div>`;
+  div.innerHTML = `${meta}${replyHtml}${textHtml}`;
+
+  enableLongPressAndContext(div, id, m, myUid);
+
+  messagesEl.appendChild(div);
+  renderedSet && renderedSet.add(id);
+}
+
+/* ================== LONG PRESS / CONTEXT ================== */
+function enableLongPressAndContext(el, msgId, messageData, myUid){
+  let timer=null, longPressed=false, LONG_MS=600;
+
+  const start = (x,y)=>{ timer=setTimeout(()=>{ longPressed=true; el.classList.add('longpressing'); showActionMenu(x,y,msgId,messageData,myUid); }, LONG_MS); };
+  const cancel = ()=>{ if(timer) clearTimeout(timer); timer=null; if(longPressed){longPressed=false; el.classList.remove('longpressing');}};
+
+  el.addEventListener('touchstart', e=>{ const t=e.touches[0]; if(t) start(t.clientX,t.clientY); }, {passive:true});
+  el.addEventListener('touchend', cancel); el.addEventListener('touchmove', cancel); el.addEventListener('touchcancel', cancel);
+  el.addEventListener('contextmenu', e=>{ e.preventDefault(); showActionMenu(e.clientX,e.clientY,msgId,messageData,myUid); return false; });
+  el.addEventListener('mousedown', e=>{ if(e.button!==0) return; start(e.clientX,e.clientY); });
+  el.addEventListener('mouseup', cancel); el.addEventListener('mouseleave', cancel);
+}
+
+let activeCtx = null;
+function showActionMenu(x,y,msgId,messageData,myUid){
+  hideActionMenu();
+  const menu=document.createElement('div'); menu.className='ctxMenu';
+  menu.style.left=(x+6)+'px'; menu.style.top=(y+6)+'px';
+
+  const replyBtn=document.createElement('button'); replyBtn.className='ctxItem'; replyBtn.innerText='Reply';
+  replyBtn.onclick=()=>{ hideActionMenu(); openReplyPreview(msgId,messageData); }; menu.appendChild(replyBtn);
+
+  if(messageData.uid===myUid){
+    const delBtn=document.createElement('button'); delBtn.className='ctxItem delete'; delBtn.innerText='Delete';
+    delBtn.onclick=async()=>{ hideActionMenu(); if(confirm("Delete this message?")) await db.ref("global/messages/"+msgId).remove(); };
+    menu.appendChild(delBtn);
+  }
+
+  const cancelBtn=document.createElement('button'); cancelBtn.className='ctxItem'; cancelBtn.innerText='Cancel'; cancelBtn.onclick=hideActionMenu;
+  menu.appendChild(cancelBtn);
+
+  document.body.appendChild(menu);
+  activeCtx=menu;
+  const rect=menu.getBoundingClientRect(), vw=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0), vh=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
+  if(rect.right>vw) menu.style.left=(vw-rect.width-12)+'px'; if(rect.bottom>vh) menu.style.top=(vh-rect.height-12)+'px';
+  setTimeout(()=>{ window.addEventListener('click',outsideClickClose); window.addEventListener('resize',hideActionMenu); window.addEventListener('scroll',hideActionMenu,true); },50);
+}
+function hideActionMenu(){ if(activeCtx){ activeCtx.remove(); activeCtx=null; window.removeEventListener('click',outsideClickClose); window.removeEventListener('resize',hideActionMenu); window.removeEventListener('scroll',hideActionMenu,true); document.querySelectorAll('.msg.longpressing').forEach(el=>el.classList.remove('longpressing')); } }
+function outsideClickClose(e){ if(!activeCtx) return; if(!activeCtx.contains(e.target)) hideActionMenu(); }
+
+/* ================== REPLY PREVIEW ================== */
+function openReplyPreview(msgId,messageData){
+  if(!messageData) return;
+  replyingTo={ id:msgId, name:messageData.name||'Unknown', text:(messageData.text||'').slice(0,300) };
+  document.getElementById('replyName').innerText=replyingTo.name;
+  document.getElementById('replyText').innerText=replyingTo.text;
+  document.getElementById('replyPreview').style.display='flex';
+  document.getElementById('text').focus();
+}
+function clearReplyPreview(){ replyingTo=null; document.getElementById('replyPreview').style.display='none'; document.getElementById('replyName').innerText=''; document.getElementById('replyText').innerText=''; }
+
+/* ================== MEMBERS LIST (RENDER USERS) ================== */
+function renderUsersPage(user){
+  db.ref("users").once("value").then(snap=>{
+    const users = snap.val() || {};
+    renderUsers(users, user.uid);
+  });
+}
+
+function renderUsers(users, myUid){
+  const membersList = document.getElementById("membersList");
+  const search = document.getElementById("search");
+
+  // Remove non-existing
+  const activeUids = new Set(Object.keys(users));
+  for(const [uid, rec] of Array.from(userMap.entries())){
+    if(!activeUids.has(uid)){
+      if(rec.listeners) rec.listeners.forEach(l=>l.ref.off('child_added',l.cb));
+      rec.el && rec.el.remove(); userMap.delete(uid);
+    }
+  }
+
+  // Add/update
+  Object.keys(users).forEach(uid=>{
+    if(uid===myUid) return;
+    const u=users[uid]||{}, name=u.name||"Unknown", photo=u.photo||"";
+    if(userMap.has(uid)){
+      const rec=userMap.get(uid);
+      rec.el.querySelector(".name").textContent=name;
+      rec.el.querySelector(".avatar").innerHTML = photo ? `<img src="${photo}" alt="avatar">` : (name[0]||"?").toUpperCase();
+      const previewEl = rec.el.querySelector(".preview");
+      loadLastMessage(uid, previewEl, rec);
+      return;
+    }
+
+    const div=document.createElement("div"); div.className="user"; div.dataset.name=name.toLowerCase(); div.dataset.uid=uid;
+    div.innerHTML = `<div class="avatar">${photo?`<img src="${photo}" alt="avatar">`:(name[0]||"?").toUpperCase()}</div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="name">${name}</div>
+          <div class="meta-time" id="time-${uid}"></div>
+        </div>
+        <div class="preview" id="preview-${uid}">No messages yet</div>
+      </div>
+      <button class="openChat" data-uid="${uid}" style="background:#06b6d4;border:none;padding:6px 10px;border-radius:8px;color:#012">Chat</button>`;
+    membersList.appendChild(div);
+
+    const rec = { el:div, lastTime:0, listeners:[] };
+    rec.timeEl = div.querySelector(".meta-time"); userMap.set(uid, rec);
+
+    div.querySelector(".openChat").onclick=e=>{ e.stopPropagation(); openChatWith(uid); };
+    div.onclick=e=>{ if(!e.target.closest('.openChat')) openChatWith(uid); };
+
+    const previewEl=div.querySelector(".preview");
+    loadLastMessage(uid, previewEl, rec);
+    attachLivePreviewListeners(uid, rec);
+  });
+
+  // Presence listener
+  if(!presenceListenerAttached){
+    presenceListenerAttached=true;
+    db.ref("presence").on("value", snap=>{
+      const pres = snap.val() || {};
+      Object.keys(pres).forEach(uid=>{
+        const rec=userMap.get(uid);
+        if(!rec || !rec.timeEl) return;
+        rec.timeEl.textContent = pres[uid].online ? "Online" : "Last seen "+new Date(pres[uid].lastSeen||Date.now()).toLocaleTimeString();
+      });
     });
+  }
+
+  // Sort by last message
+  const sortedUsers = Object.keys(users).filter(uid=>uid!==myUid).sort((a,b)=>{
+    const aTime=userMap.get(a)?.lastTime||0, bTime=userMap.get(b)?.lastTime||0;
+    return bTime-aTime;
+  });
+  sortedUsers.forEach(uid=>{ const rec=userMap.get(uid); if(rec && rec.el && rec.el.parentNode) membersList.appendChild(rec.el); });
+
+  search.dispatchEvent(new Event('input'));
 }
 
-/* ========== UTIL ========== */
-function escape(s){
-  if (!s) return '';
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ================== LAST MESSAGE ================== */
+function loadLastMessage(uid, previewEl, rec){
+  db.ref("messages").child(uid).limitToLast(1).once("value").then(snap=>{
+    const msgData = snap.val();
+    if(!msgData){ previewEl.textContent="No messages yet"; rec.lastTime=0; return; }
+    const lastMsgKey = Object.keys(msgData)[0];
+    const lastMsg = msgData[lastMsgKey];
+    previewEl.textContent = lastMsg.text||"No messages yet";
+    rec.lastTime = lastMsg.timestamp||0;
+  });
 }
 
-/* Prevent native context menu on non-input elements so our right-click works for messages */
-document.addEventListener('contextmenu', (e) => {
-  const tag = (e.target && e.target.tagName || '').toLowerCase();
-  if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
-  // allow default elsewhere (optional) — but we prevent to ensure message right-click works
-  e.preventDefault();
-}, {passive:false});
+function attachLivePreviewListeners(uid, rec){
+  const cb = db.ref("messages").child(uid).limitToLast(1).on("child_added", snap=>{
+    const msg = snap.val(); if(!msg) return;
+    const previewEl = rec.el.querySelector(".preview");
+    previewEl.textContent = msg.text || "No messages yet";
+    rec.lastTime = msg.timestamp || 0;
+  });
+  rec.listeners.push({ ref: db.ref("messages").child(uid), cb });
+}
+
+/* ================== UTILS ================== */
+function escape(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+document.addEventListener('contextmenu',e=>{ const tag=(e.target&&e.target.tagName||'').toLowerCase(); if(tag==='input'||tag==='textarea'||e.target.isContentEditable) return; e.preventDefault(); }, {passive:false});
+
 </script>
 </body>
 </html>

@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Private chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
@@ -11,6 +10,7 @@
   body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#fff;font-family:Inter}
   .header{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,0.02)}
   .back{background:transparent;border:none;color:#9bd;cursor:pointer}
+  .otherPic{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#0b1220}
   .container{display:flex;flex-direction:column;height:calc(100dvh - 64px)}
   .messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
   .msg{max-width:75%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);position:relative}
@@ -19,59 +19,10 @@
   .compose{display:flex;padding:12px;gap:8px;background:rgba(0,0,0,0.04)}
   .input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255, 255, 255, 0.593);background:transparent;color:#fff;min-height:42px}
   .send{padding: bottom 0px;border-radius:10px;border:none;background:transparent;color:#fff;cursor:pointer}
-
-  /* --- Reply preview above textbox --- */
-  .replyBar {
-    display:flex;
-    flex-direction:row;
-    align-items:center;
-    border-left:4px solid #4f46e5;
-    padding:6px 10px;
-    margin:0 12px;
-    margin-bottom:4px;
-    background:rgba(255,255,255,0.05);
-    border-radius:8px;
-  }
+  .replyBar { display:flex; flex-direction:row; align-items:center; border-left:4px solid #4f46e5; padding:6px 10px; margin:0 12px; margin-bottom:4px; background:rgba(255,255,255,0.05); border-radius:8px; }
   .replyBarText { flex:1; font-size:14px; color:#d1d5db; }
   .cancelReplyBtn { cursor:pointer; padding:6px 10px; color:#ff6b6b; }
-
-  /* --- Reply bubble inside chat --- */
-  .replyBubble {
-    border-left:4px solid rgba(255,255,255,0.4);
-    padding-left:6px;
-    margin-bottom:6px;
-    opacity:0.85;
-    font-size:13px;
-  }
-
-  /* Context menu */
-  .ctxMenu {
-    position:fixed;
-    z-index:9999;
-    background:rgba(20,20,30,0.98);
-    border:1px solid rgba(255,255,255,0.04);
-    padding:6px;
-    border-radius:8px;
-    box-shadow:0 6px 30px rgba(0,0,0,0.6);
-    display:flex;
-    gap:8px;
-    min-width:120px;
-  }
-  .ctxBtn {
-    padding:8px 10px;
-    border-radius:6px;
-    cursor:pointer;
-    font-size:14px;
-    color:#fff;
-    background:transparent;
-    border:1px solid rgba(255,255,255,0.03);
-  }
-  .ctxBtn.delete { color:#ff6b6b; border-color:rgba(255,107,107,0.08);}
-  .ctxBtn.cancel { color:#9aa8bb; border-color:rgba(255,255,255,0.02);}
-  .ctxBtn.reply { color:#22c55e; border-color:rgba(34,197,94,0.1); }
-
-  .msg.longpressing { outline:2px solid rgba(255,255,255,0.06); transform:scale(0.995); }
-
+  .replyBubble { border-left:4px solid rgba(255,255,255,0.4); padding-left:6px; margin-bottom:6px; opacity:0.85; font-size:13px; }
 </style>
 </head>
 <body>
@@ -80,6 +31,7 @@
 
 <div class="header">
   <button class="back" onclick="location.href='members.html'">←</button>
+  <img id="otherPic" class="otherPic" src="https://via.placeholder.com/80x80?text=?" />
   <div>
     <div id="otherName" style="font-weight:700">Chat</div>
     <div id="otherStatus" style="font-size:12px;color:#9aa8bb">Connecting...</div>
@@ -89,14 +41,11 @@
 <div class="container">
   <div class="messages" id="messages"></div>
 
-  <!-- Reply preview inserts ABOVE this -->
   <div class="compose">
     <textarea id="text" class="input" placeholder="Type a message..." rows="1"></textarea>
-    <button id="btnSend" class="send">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <button id="btnSend" class="send"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M9.61109 12.4L10.8183 18.5355C11.0462 19.6939 12.6026 19.9244 13.1565 18.8818L19.0211 7.84263C19.248 7.41555 19.2006 6.94354 18.9737 6.58417M9.61109 12.4L5.22642 8.15534C4.41653 7.37131 4.97155 6 6.09877 6H17.9135C18.3758 6 18.7568 6.24061 18.9737 6.58417M9.61109 12.4L18.9737 6.58417M19.0555 6.53333L18.9737 6.58417" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-  </svg>
-    </button>
+  </svg></button>
   </div>
 </div>
 
@@ -106,7 +55,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script>
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
@@ -117,84 +65,124 @@ const firebaseConfig = {
   messagingSenderId: "888124564246",
   appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
 };
-
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.database();
 
-/* URL reading */
 function qs(x){ return new URLSearchParams(location.search).get(x);}
 const chatId = qs("chatId");
 const other = qs("other");
 
-let replyTarget = null;  // stores {id, sender, text}
+let replyTarget = null;
+let otherName = "User";
+
+/* ---------------- IMAGE CACHE ---------------- */
+const imageCache = {}; // userId -> Image object
+function preloadImage(uid, url){
+  if(!url || imageCache[uid]) return;
+  const img = new Image();
+  img.src = url;
+  imageCache[uid] = img;
+}
 
 /* ================= INIT CHAT ================= */
 auth.onAuthStateChanged(u=>{
   if(!u) location.href="login.html";
-  else initChat(u);
+  else {
+    initPresence(u);
+    initChat(u);
+  }
 });
 
 function initChat(user){
   const messagesEl = document.getElementById("messages");
   const nameEl = document.getElementById("otherName");
   const statusEl = document.getElementById("otherStatus");
+  const otherPicEl = document.getElementById("otherPic");
 
-  /* Load other user name */
-  db.ref("users/"+other).once("value").then(s=>{
-    nameEl.innerText = (s.val() && s.val().name) || "User";
+  // Load other user name & photo with cache
+  const cachedPhoto = localStorage.getItem("photo_" + other);
+  if(cachedPhoto) otherPicEl.src = cachedPhoto;
+
+  db.ref("users/"+other).on("value", s=>{
+    const val = s.val() || {};
+    otherName = val.name || "User";
+    nameEl.innerText = otherName;
+
+    const photoUrl = val.photo || "https://via.placeholder.com/80x80?text=?";
+    otherPicEl.src = photoUrl;
+    preloadImage(other, photoUrl);
+    localStorage.setItem("photo_" + other, photoUrl);
   });
 
-  /* Presence */
+  // Presence
   db.ref("presence/"+other).on("value", snap=>{
     const p = snap.val();
-    statusEl.innerText = p?.online
-      ? "Online"
-      : "Last seen: " + new Date(p?.lastSeen || Date.now()).toLocaleString();
+    statusEl.innerText = p?.online ? "Online" : "Last seen: " + new Date(p?.lastSeen || Date.now()).toLocaleString();
   });
 
   const rendered = new Set();
+  const msgRef = db.ref(`privateChats/${chatId}/messages`);
 
-  /* Initial load */
-  db.ref(`privateChats/${chatId}/messages`)
-    .orderByChild("time")
-    .once("value", snap=>{
-      messagesEl.innerHTML="";
-      rendered.clear();
-      snap.forEach(c=>{
-        const d=c.val(); d.id=c.key;
-        renderMsg(d,user.uid);
-        rendered.add(d.id);
-      });
+  // Initial load with lazy rendering
+  msgRef.orderByChild("time").once("value", snap=>{
+    messagesEl.innerHTML="";
+    rendered.clear();
+    const messages = [];
+    snap.forEach(c=>{
+      const d = c.val(); 
+      d.id = c.key;
+      messages.push(d);
+    });
+
+    // Render last 50 messages first
+    const start = Math.max(0, messages.length - 50);
+    for(let i = start; i < messages.length; i++){
+      renderMsg(messages[i], user.uid);
+      markAsSeen(messages[i].id, user.uid);
+      rendered.add(messages[i].id);
+    }
+    scrollToBottom();
+
+    // Lazy render older messages asynchronously to avoid blocking
+    if(start > 0){
+      setTimeout(() => {
+        for(let i = 0; i < start; i++){
+          renderMsg(messages[i], user.uid);
+          markAsSeen(messages[i].id, user.uid);
+          rendered.add(messages[i].id);
+        }
+      }, 50); // small delay to prevent freezing
+    }
+  });
+
+  // Live new messages
+  msgRef.orderByChild("time").on("child_added", snap=>{
+    const d=snap.val(); d.id=snap.key;
+    if(!rendered.has(d.id)){
+      renderMsg(d,user.uid);
+      markAsSeen(d.id, user.uid);
+      rendered.add(d.id);
       scrollToBottom();
-    });
+    }
+  });
 
-  /* Live new messages */
-  db.ref(`privateChats/${chatId}/messages`)
-    .orderByChild("time")
-    .on("child_added", snap=>{
-      const d=snap.val(); d.id=snap.key;
-      if(!rendered.has(d.id)){
-        renderMsg(d,user.uid);
-        rendered.add(d.id);
-        scrollToBottom();
-      }
-    });
+  // child_changed for ticks update
+  msgRef.on("child_changed", snap=>{
+    const d=snap.val(); d.id = snap.key;
+    const el = document.querySelector(`[data-msgid="${d.id}"]`);
+    if(el) updateMsgTicks(el, d, user.uid);
+  });
 
-  /* Deleted messages */
-  db.ref(`privateChats/${chatId}/messages`)
-    .on("child_removed", snap=>{
-      const el=document.querySelector(`[data-msgid="${snap.key}"]`);
-      if(el){
-        el.innerHTML =
-        `<div style="font-size:12px;color:#9aa8bb;">Message deleted</div>`;
-      }
-    });
+  // child_removed
+  msgRef.on("child_removed", snap=>{
+    const el=document.querySelector(`[data-msgid="${snap.key}"]`);
+    if(el) el.innerHTML = `<div style="font-size:12px;color:#9aa8bb;">Message deleted</div>`;
+  });
 
-  /* SEND */
-  document.getElementById("btnSend").onclick = ()=>sendMessage(user);
+  // send handlers
   const input=document.getElementById("text");
+  document.getElementById("btnSend").onclick = ()=>sendMessage(user);
   input.onkeydown=(e)=>{
     if(e.key==="Enter" && !e.shiftKey){
       e.preventDefault();
@@ -203,29 +191,43 @@ function initChat(user){
   };
 }
 
-/* ================= SEND MESSAGE (with reply) ================= */
+/* ================= SEND MESSAGE ================= */
 function sendMessage(user){
   const text = document.getElementById("text").value.trim();
   if(!text) return;
 
   const newMsg = {
     sender: user.uid,
+    senderName: user.displayName || "You",
     text,
-    time: Date.now()
+    time: Date.now(),
+    seenBy: [user.uid]
   };
 
   if(replyTarget){
     newMsg.reply = {
       id: replyTarget.id,
       sender: replyTarget.sender,
+      senderName: replyTarget.senderName,
       text: replyTarget.text
     };
   }
 
   db.ref(`privateChats/${chatId}/messages`).push(newMsg);
-
   document.getElementById("text").value = "";
   hideReplyPreview();
+}
+
+/* ================= MARK AS SEEN ================= */
+function markAsSeen(msgId, userId){
+  const seenRef = db.ref(`privateChats/${chatId}/messages/${msgId}/seenBy`);
+  seenRef.once("value").then(snap=>{
+    let arr = snap.val() || [];
+    if(!arr.includes(userId)){
+      arr.push(userId);
+      seenRef.set(arr);
+    }
+  });
 }
 
 /* ================= RENDER MESSAGE ================= */
@@ -235,131 +237,115 @@ function renderMsg(m,my){
   box.dataset.msgid=m.id;
 
   let replyHtml = "";
-
   if(m.reply){
     replyHtml = `
       <div class="replyBubble">
-        <div style="font-weight:600;">${m.reply.sender===my?"You":"User"}</div>
+        <div style="font-weight:600;">${m.reply.sender===my ? "You" : m.reply.senderName || otherName}</div>
         <div style="opacity:0.8;">${escapeHtml(m.reply.text)}</div>
       </div>
     `;
   }
 
+  const senderName = m.sender===my ? "You" : m.senderName || otherName;
+  const ticks = getTicks(m, my);
+
   box.innerHTML = `
-    <div class="meta">${m.sender===my?"You":"User"} • ${new Date(m.time).toLocaleTimeString()}</div>
+    <div class="meta">${senderName} • ${new Date(m.time).toLocaleTimeString()} ${ticks}</div>
     ${replyHtml}
     <div>${escapeHtml(m.text)}</div>
   `;
 
   enableMessageContext(box,m);
-
   document.getElementById("messages").appendChild(box);
+}
+
+/* ================= UPDATE TICKS ================= */
+function getTicks(m, my){
+  if(m.sender!==my) return "";
+  const otherId = other;
+  if(m.seenBy && m.seenBy.includes(otherId)) return "✔✔";
+  return "✔";
+}
+function updateMsgTicks(el, m, my){
+  const meta = el.querySelector(".meta");
+  if(meta){
+    const senderName = m.sender===my ? "You" : m.senderName || otherName;
+    meta.innerText = `${senderName} • ${new Date(m.time).toLocaleTimeString()} ${getTicks(m,my)}`;
+  }
 }
 
 /* ================= LONG PRESS + MENU ================= */
 function enableMessageContext(el,msg){
   let timer=null;
-
   el.addEventListener("contextmenu",e=>{
-    e.preventDefault();
-    showMenu(e.clientX,e.clientY,msg);
+    e.preventDefault(); showMenu(e.clientX,e.clientY,msg);
   });
-
   el.addEventListener("touchstart",e=>{
     const t=e.touches[0];
     timer=setTimeout(()=>showMenu(t.clientX,t.clientY,msg),600);
   });
-
   ["touchend","touchmove","touchcancel"].forEach(ev=>{
     el.addEventListener(ev,()=>clearTimeout(timer));
   });
 }
-
 let activeMenu=null;
-
 function showMenu(x,y,msg){
   hideMenu();
-
   const menu=document.createElement("div");
   menu.className="ctxMenu";
-  menu.style.left=x+"px";
-  menu.style.top=y+"px";
+  menu.style.left=x+"px"; menu.style.top=y+"px";
 
-  /* Reply */
   const btnReply=document.createElement("div");
-  btnReply.className="ctxBtn reply";
-  btnReply.innerText="Reply";
-  btnReply.onclick=()=>{
-    hideMenu();
-    showReplyPreview(msg);
-  };
+  btnReply.className="ctxBtn reply"; btnReply.innerText="Reply"; btnReply.onclick=()=>{ hideMenu(); showReplyPreview(msg); };
 
-  /* Delete */
   const btnDelete=document.createElement("div");
-  btnDelete.className="ctxBtn delete";
-  btnDelete.innerText="Delete";
-  btnDelete.onclick=()=>{
-    hideMenu();
-    if(confirm("Delete this message?")){
-      db.ref(`privateChats/${chatId}/messages/${msg.id}`).remove();
-    }
-  };
+  btnDelete.className="ctxBtn delete"; btnDelete.innerText="Delete";
+  btnDelete.onclick=()=>{ hideMenu(); if(confirm("Delete this message?")) db.ref(`privateChats/${chatId}/messages/${msg.id}`).remove(); };
 
-  /* Cancel */
   const btnCancel=document.createElement("div");
-  btnCancel.className="ctxBtn cancel";
-  btnCancel.innerText="Cancel";
-  btnCancel.onclick=hideMenu;
+  btnCancel.className="ctxBtn cancel"; btnCancel.innerText="Cancel"; btnCancel.onclick=hideMenu;
 
-  menu.appendChild(btnReply);
-  menu.appendChild(btnDelete);
-  menu.appendChild(btnCancel);
-
+  menu.appendChild(btnReply); menu.appendChild(btnDelete); menu.appendChild(btnCancel);
   document.body.appendChild(menu);
   activeMenu=menu;
-
   window.addEventListener("click",hideMenu);
 }
-
-function hideMenu(){
-  if(activeMenu){
-    activeMenu.remove();
-    activeMenu=null;
-    window.removeEventListener("click",hideMenu);
-  }
-}
+function hideMenu(){ if(activeMenu){ activeMenu.remove(); activeMenu=null; window.removeEventListener("click",hideMenu); } }
 
 /* ================= REPLY PREVIEW ================= */
 function showReplyPreview(msg){
-  replyTarget = { id:msg.id, sender:msg.sender, text:msg.text };
-
+  replyTarget = { id:msg.id, sender:msg.sender, senderName:msg.senderName || otherName, text:msg.text };
   const holder=document.getElementById("replyPreviewHolder");
   holder.innerHTML=`
     <div class="replyBar">
       <div class="replyBarText">
-        <div style="font-weight:600;">Replying to ${msg.sender}</div>
+        <div style="font-weight:600;">Replying to ${replyTarget.sender===auth.currentUser.uid ? "You" : replyTarget.senderName}</div>
         <div style="opacity:0.8;">${escapeHtml(msg.text)}</div>
       </div>
       <div class="cancelReplyBtn" onclick="hideReplyPreview()">✕</div>
     </div>
   `;
 }
-
-function hideReplyPreview(){
-  replyTarget=null;
-  document.getElementById("replyPreviewHolder").innerHTML="";
-}
+function hideReplyPreview(){ replyTarget=null; document.getElementById("replyPreviewHolder").innerHTML=""; }
 
 /* ================= HELPERS ================= */
-function scrollToBottom(){
-  const el=document.getElementById("messages");
-  el.scrollTop=el.scrollHeight;
-}
+function scrollToBottom(){ const el=document.getElementById("messages"); el.scrollTop=el.scrollHeight; }
+function escapeHtml(x){ return x.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-function escapeHtml(x){
-  return x.replace(/[&<>"']/g,c=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-  }[c]));
+/* ================= PRESENCE ================= */
+function initPresence(user){
+  const uid = user.uid;
+  const presenceRef = db.ref("presence/" + uid);
+  const connectedRef = db.ref(".info/connected");
+
+  connectedRef.on("value", snap => {
+    if(snap.val() === true){
+      presenceRef.set({ online:true,lastSeen:Date.now(),name:user.displayName || "" });
+      presenceRef.onDisconnect().set({ online:false,lastSeen:Date.now(),name:user.displayName || "" });
+    }
+  });
+
+  setInterval(() => { presenceRef.update({ lastSeen: Date.now() }); }, 60_000);
 }
 
 </script>
