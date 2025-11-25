@@ -6,24 +6,32 @@
 <title>Private Chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root { --bg1:#071428; --bg2:#041022; --muted:#9aa8bb; }
-body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#fff;font-family:Inter}
+:root { --bg1:#071428; --bg2:#041022; --muted:#9aa8bb; --accent:#4f46e5; }
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto}
 .header{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,0.02)}
 .back{background:transparent;border:none;color:#9bd;cursor:pointer;font-size:18px}
 .otherPic{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#0b1220}
 .container{display:flex;flex-direction:column;height:calc(100dvh - 64px)}
-.messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column-reverse;gap:8px}
+.messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
 .msg{max-width:75%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);position:relative;word-break:break-word}
 .msg.me{align-self:flex-end;background:linear-gradient(90deg,#090909,#070707);color:#fff}
-.meta{font-size:12px;color:var(--muted);margin-bottom:4px}
-.compose{display:flex;padding:12px;gap:8px;background:rgba(0,0,0,0.04)}
-.input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255, 255, 255, 0.593);background:transparent;color:#fff;min-height:42px;resize:none}
-.send{border:none;background:transparent;color:#fff;cursor:pointer}
-.replyBar { display:flex; flex-direction:row; align-items:center; border-left:4px solid #4f46e5; padding:6px 10px; margin:0 12px; margin-bottom:4px; background:rgba(255,255,255,0.05); border-radius:8px; }
+.meta{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
+.compose{display:flex;padding:12px;gap:8px;background:rgba(0,0,0,0.04);align-items:flex-end}
+.input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#fff;min-height:42px;resize:none;overflow:hidden}
+.send{border:none;background:transparent;color:#fff;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center}
+.replyBar { display:flex; flex-direction:row; align-items:center; border-left:4px solid var(--accent); padding:6px 10px; margin:8px 12px 4px 12px; background:rgba(255,255,255,0.03); border-radius:8px; }
 .replyBarText { flex:1; font-size:14px; color:#d1d5db; }
-.cancelReplyBtn { cursor:pointer; padding:6px 10px; color:#ff6b6b; }
-.replyBubble { border-left:4px solid rgba(255,255,255,0.4); padding-left:6px; margin-bottom:6px; opacity:0.85; font-size:13px; }
+.cancelReplyBtn { cursor:pointer; padding:6px 10px; color:#ff6b6b; font-weight:600; }
+.replyBubble { border-left:4px solid rgba(255,255,255,0.12); padding-left:8px; margin-bottom:6px; opacity:0.95; font-size:13px; }
 #loadingOverlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;z-index:9999; display:none;}
+/* Context menu */
+.ctxMenu{position:fixed;background:#071428;border:1px solid rgba(255,255,255,0.06);box-shadow:0 6px 20px rgba(0,0,0,0.6);padding:6px;border-radius:8px;z-index:10000}
+.ctxBtn{padding:8px 12px;cursor:pointer;border-radius:6px;font-size:14px;color:#d1d5db;white-space:nowrap}
+.ctxBtn:hover{background:rgba(255,255,255,0.03)}
+.ctxBtn.delete{color:#ff6b6b}
+.ctxBtn.reply{color:var(--accent);font-weight:600}
+.smallNote{font-size:12px;color:var(--muted);padding:8px 12px}
 </style>
 </head>
 <body>
@@ -33,7 +41,7 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(
 
 <div class="header">
   <button class="back" onclick="location.href='members.html'">←</button>
-  <img id="otherPic" class="otherPic" src="https://via.placeholder.com/80x80?text=?" />
+  <img id="otherPic" class="otherPic" src="https://via.placeholder.com/80x80?text=?" alt="other profile" />
   <div>
     <div id="otherName" style="font-weight:700">Chat</div>
     <div id="otherStatus" style="font-size:12px;color:#9aa8bb">Connecting...</div>
@@ -41,11 +49,11 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(
 </div>
 
 <div class="container">
-  <div class="messages" id="messages"></div>
+  <div class="messages" id="messages" tabindex="0" aria-live="polite"></div>
   <div class="compose">
-    <textarea id="text" class="input" placeholder="Type a message..." rows="1"></textarea>
-    <button id="btnSend" class="send">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+    <textarea id="text" class="input" placeholder="Type a message..." rows="1" aria-label="Message input"></textarea>
+    <button id="btnSend" class="send" title="Send (Enter)">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M9.61109 12.4L10.8183 18.5355C11.0462 19.6939 12.6026 19.9244 13.1565 18.8818L19.0211 7.84263C19.248 7.41555 19.2006 6.94354 18.9737 6.58417M9.61109 12.4L5.22642 8.15534C4.41653 7.37131 4.97155 6 6.09877 6H17.9135C18.3758 6 18.7568 6.24061 18.9737 6.58417M9.61109 12.4L18.9737 6.58417M19.0555 6.53333L18.9737 6.58417" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
     </button>
@@ -73,6 +81,12 @@ const db = firebase.database();
 
 const chatId = new URLSearchParams(location.search).get("chatId");
 const other = new URLSearchParams(location.search).get("other");
+if(!chatId || !other){
+  // missing required params — redirect back
+  console.error("Missing chatId or other in URL");
+  location.href = "members.html";
+}
+
 let replyTarget = null, otherName = "User";
 const imageCache = {}, BATCH_SIZE=30;
 let oldestLoadedTime=null, loadingHistory=false;
@@ -80,15 +94,16 @@ let oldestLoadedTime=null, loadingHistory=false;
 const loadingEl = document.getElementById("loadingOverlay");
 function showLoading(text="Loading..."){ loadingEl.style.display="flex"; loadingEl.textContent=text; }
 function hideLoading(){ loadingEl.style.display="none"; }
-function escapeHtml(x){ return x.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-function scrollToBottom(){ const el=document.getElementById("messages"); el.scrollTop=el.scrollHeight; }
-function preloadImage(uid,url){ if(!url||imageCache[uid]) return; const img=new Image(); img.src=url; imageCache[uid]=img; }
+function escapeHtml(x){ return String(x||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function scrollToBottom(){ const el=document.getElementById("messages"); el.scrollTop = el.scrollHeight; }
+function preloadImage(uid,url){ if(!url) return; if(imageCache[uid]) return; const img=new Image(); img.src=url; imageCache[uid]=img; }
 
 auth.onAuthStateChanged(u=>{
   if(!u) location.href="login.html";
   else { initPresence(u); initChat(u); }
 });
 
+/* ---------------- chat init ---------------- */
 function initChat(user){
   const messagesEl=document.getElementById("messages");
   const nameEl=document.getElementById("otherName");
@@ -103,150 +118,233 @@ function initChat(user){
     otherName = val.name||"User";
     nameEl.innerText = otherName;
     const photoUrl = val.photo || "https://via.placeholder.com/80x80?text=?";
-    otherPicEl.src=photoUrl;
+    otherPicEl.src = photoUrl;
     preloadImage(other,photoUrl);
-    localStorage.setItem("photo_" + other,photoUrl);
+    try{ localStorage.setItem("photo_" + other,photoUrl); }catch(e){}
   });
 
   db.ref("presence/"+other).on("value",snap=>{
     const p=snap.val();
-    statusEl.innerText=p?.online?"Online":"Last seen: "+new Date(p?.lastSeen||Date.now()).toLocaleString();
+    statusEl.innerText = p?.online ? "Online" : "Last seen: " + new Date(p?.lastSeen||Date.now()).toLocaleString();
   });
 
   const rendered=new Set();
   const msgRef=db.ref(`privateChats/${chatId}/messages`);
 
-  // Load latest 30 messages
+  // Load latest messages
   showLoading("Loading messages...");
   msgRef.orderByChild("time").limitToLast(BATCH_SIZE).once("value").then(snap=>{
     messagesEl.innerHTML="";
     const msgs=[];
     snap.forEach(c=>{ const d=c.val(); d.id=c.key; msgs.push(d); });
+    // msgs are in ascending order (old -> new)
     msgs.forEach(m=>{ renderMsg(m,user.uid); markAsSeen(m.id,user.uid); rendered.add(m.id); });
-    if(msgs.length) oldestLoadedTime=msgs[0].time;
-    scrollToBottom();
-    hideLoading();
-  });
+    if(msgs.length) oldestLoadedTime = msgs[0].time; // earliest of loaded batch
+    // small delay to ensure layout ready
+    setTimeout(()=>{ scrollToBottom(); hideLoading(); },50);
+  }).catch(err=>{ console.error(err); hideLoading(); });
 
-  // Infinite scroll to load older messages
-  messagesEl.addEventListener("scroll",async function(){
-    if(this.scrollTop===0 && !loadingHistory && oldestLoadedTime){
+  // Infinite scroll: load older when scrolled to top
+  messagesEl.addEventListener("scroll", async function(){
+    if(this.scrollTop <= 0 && !loadingHistory && oldestLoadedTime){
       loadingHistory=true; showLoading("Loading older messages...");
-      const snap=await msgRef.orderByChild("time").endAt(oldestLoadedTime-1).limitToLast(BATCH_SIZE).once("value");
-      const msgs=[]; snap.forEach(c=>{ const d=c.val(); d.id=c.key; msgs.push(d); });
-      if(msgs.length===0){ oldestLoadedTime=null; loadingHistory=false; hideLoading(); return; }
-      const scrollBefore=messagesEl.scrollHeight;
-      msgs.reverse().forEach(m=>renderMsgAtTop(m,user.uid));
-      oldestLoadedTime=msgs[0].time;
-      loadingHistory=false;
-      messagesEl.scrollTop=messagesEl.scrollHeight-scrollBefore;
-      hideLoading();
+      try{
+        const snap = await msgRef.orderByChild("time").endAt(oldestLoadedTime - 1).limitToLast(BATCH_SIZE).once("value");
+        const msgs = [];
+        snap.forEach(c=>{ const d=c.val(); d.id=c.key; msgs.push(d); });
+        if(msgs.length===0){ oldestLoadedTime = null; loadingHistory=false; hideLoading(); return; }
+        // msgs ascending. We'll prepend them (older at top)
+        const scrollBefore = messagesEl.scrollHeight;
+        msgs.forEach(m => renderMsgAtTop(m, user.uid));
+        // new earliest is msgs[0]
+        oldestLoadedTime = msgs[0].time;
+        // preserve scroll position
+        const scrollAfter = messagesEl.scrollHeight;
+        messagesEl.scrollTop = scrollAfter - scrollBefore;
+      }catch(e){
+        console.error(e);
+      } finally{
+        loadingHistory=false; hideLoading();
+      }
     }
   });
 
-  // Live new messages
-  msgRef.orderByChild("time").startAt(Date.now()).on("child_added",snap=>{
-    const m=snap.val(); m.id=snap.key;
-    if(!rendered.has(m.id)){ renderMsg(m,user.uid); markAsSeen(m.id,user.uid); rendered.add(m.id); scrollToBottom(); }
+  // Live new messages (child_added after now)
+  const startAtTime = Date.now();
+  msgRef.orderByChild("time").startAt(startAtTime).on("child_added",snap=>{
+    const m = snap.val(); m.id = snap.key;
+    if(!rendered.has(m.id)){
+      renderMsg(m,user.uid);
+      markAsSeen(m.id,user.uid);
+      rendered.add(m.id);
+      scrollToBottom();
+    }
   });
 
-  // child_changed for ticks
+  // updates (ticks etc)
   msgRef.on("child_changed",snap=>{
     const m=snap.val(); m.id=snap.key;
     const el=document.querySelector(`[data-msgid="${m.id}"]`);
     if(el) updateMsgTicks(el,m,user.uid);
   });
 
-  // child_removed
+  // deletions
   msgRef.on("child_removed",snap=>{
     const el=document.querySelector(`[data-msgid="${snap.key}"]`);
-    if(el) if(el) el.innerHTML=`<div style="font-size:12px;color:#9aa8bb;">Message deleted</div>`;
+    if(el) el.innerHTML=`<div class="smallNote">Message deleted</div>`;
   });
 
   // send handlers
   const input=document.getElementById("text");
   document.getElementById("btnSend").onclick=()=>sendMessage(user);
-  input.onkeydown=(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(user); } }
+  input.addEventListener("keydown",(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(user); } });
+  // auto-resize textarea
+  const autoResize = ()=>{ input.style.height='auto'; input.style.height = Math.min(200, input.scrollHeight) + 'px'; };
+  input.addEventListener('input', autoResize);
+  autoResize();
 }
 
 /* ================= SEND MESSAGE ================= */
 function sendMessage(user){
-  const text=document.getElementById("text").value.trim();
+  const elText=document.getElementById("text");
+  const text = elText.value.trim();
   if(!text) return;
-  const newMsg={sender:user.uid,senderName:user.displayName||"You",text,time:Date.now(),seenBy:[user.uid]};
-  if(replyTarget) newMsg.reply={id:replyTarget.id,sender:replyTarget.sender,senderName:replyTarget.senderName,text:replyTarget.text};
-  db.ref(`privateChats/${chatId}/messages`).push(newMsg);
-  document.getElementById("text").value="";
+  const newMsg = { sender: user.uid, senderName: user.displayName||"You", text: text, time: Date.now(), seenBy: [user.uid] };
+  if(replyTarget) newMsg.reply = { id: replyTarget.id, sender: replyTarget.sender, senderName: replyTarget.senderName, text: replyTarget.text };
+  db.ref(`privateChats/${chatId}/messages`).push(newMsg).catch(err=>console.error("send error",err));
+  elText.value = ""; elText.style.height='auto';
   hideReplyPreview();
 }
 
 /* ================= MARK AS SEEN ================= */
 function markAsSeen(msgId,userId){
-  const seenRef=db.ref(`privateChats/${chatId}/messages/${msgId}/seenBy`);
-  seenRef.once("value").then(snap=>{ let arr=snap.val()||[]; if(!arr.includes(userId)){ arr.push(userId); seenRef.set(arr); } });
+  if(!msgId) return;
+  const seenRef = db.ref(`privateChats/${chatId}/messages/${msgId}/seenBy`);
+  seenRef.once("value").then(snap=>{
+    const arr = snap.val() || [];
+    // ensure arr is an array
+    if(!Array.isArray(arr)){
+      // If it's an object or something else, coerce to array
+      const coerced = Array.isArray(arr) ? arr : Object.values(arr || {});
+      if(!coerced.includes(userId)){ coerced.push(userId); seenRef.set(coerced); }
+    } else {
+      if(!arr.includes(userId)){ arr.push(userId); seenRef.set(arr); }
+    }
+  }).catch(e=>console.error("seen error",e));
 }
 
 /* ================= RENDER MESSAGE ================= */
 function renderMsg(m,my){
-  const box=document.createElement("div"); box.className="msg"+(m.sender===my?" me":""); box.dataset.msgid=m.id;
-  let replyHtml="";
-  if(m.reply){ replyHtml=`<div class="replyBubble"><div style="font-weight:600;">${m.reply.sender===my?"You":m.reply.senderName||otherName}</div><div style="opacity:0.8;">${escapeHtml(m.reply.text)}</div></div>`; }
-  const senderName=m.sender===my?"You":m.senderName||otherName;
-  const ticks=getTicks(m,my);
-  box.innerHTML=`<div class="meta">${senderName} • ${new Date(m.time).toLocaleTimeString()} ${ticks}</div>${replyHtml}<div>${escapeHtml(m.text)}</div>`;
+  const box = document.createElement("div");
+  box.className = "msg" + (m.sender===my ? " me" : "");
+  box.dataset.msgid = m.id;
+  let replyHtml = "";
+  if(m.reply){
+    replyHtml = `<div class="replyBubble"><div style="font-weight:600;">${m.reply.sender===my ? "You" : (escapeHtml(m.reply.senderName || otherName))}</div><div style="opacity:0.8;">${escapeHtml(m.reply.text)}</div></div>`;
+  }
+  const senderName = m.sender===my ? "You" : escapeHtml(m.senderName || otherName);
+  const ticks = getTicks(m,my);
+  box.innerHTML = `<div class="meta">${senderName} • ${new Date(m.time).toLocaleTimeString()} ${ticks}</div>${replyHtml}<div>${escapeHtml(m.text)}</div>`;
   enableMessageContext(box,m);
   document.getElementById("messages").appendChild(box);
 }
 function renderMsgAtTop(m,my){
-  const box=document.createElement("div"); box.className="msg"+(m.sender===my?" me":""); box.dataset.msgid=m.id;
-  let replyHtml=""; if(m.reply){ replyHtml=`<div class="replyBubble"><div style="font-weight:600;">${m.reply.sender===my?"You":m.reply.senderName||otherName}</div><div style="opacity:0.8;">${escapeHtml(m.reply.text)}</div></div>`; }
-  const senderName=m.sender===my?"You":m.senderName||otherName; const ticks=getTicks(m,my);
-  box.innerHTML=`<div class="meta">${senderName} • ${new Date(m.time).toLocaleTimeString()} ${ticks}</div>${replyHtml}<div>${escapeHtml(m.text)}</div>`;
+  const box = document.createElement("div");
+  box.className = "msg" + (m.sender===my ? " me" : "");
+  box.dataset.msgid = m.id;
+  let replyHtml = "";
+  if(m.reply){
+    replyHtml = `<div class="replyBubble"><div style="font-weight:600;">${m.reply.sender===my ? "You" : (escapeHtml(m.reply.senderName || otherName))}</div><div style="opacity:0.8;">${escapeHtml(m.reply.text)}</div></div>`;
+  }
+  const senderName = m.sender===my ? "You" : escapeHtml(m.senderName || otherName);
+  const ticks = getTicks(m,my);
+  box.innerHTML = `<div class="meta">${senderName} • ${new Date(m.time).toLocaleTimeString()} ${ticks}</div>${replyHtml}<div>${escapeHtml(m.text)}</div>`;
   enableMessageContext(box,m);
-  document.getElementById("messages").prepend(box);
+  const messagesEl = document.getElementById("messages");
+  messagesEl.insertBefore(box, messagesEl.firstChild);
 }
 
 /* ================= TICKS ================= */
-function getTicks(m,my){ return (m.sender!==my)?"":(m.seenBy&&m.seenBy.includes(other)?"✔✔":"✔"); }
-function updateMsgTicks(el,m,my){ const meta=el.querySelector(".meta"); if(meta){ meta.innerText=`${m.sender===my?"You":m.senderName||otherName} • ${new Date(m.time).toLocaleTimeString()} ${getTicks(m,my)}`; } }
+function getTicks(m,my){
+  if(!m) return "";
+  return (m.sender !== my) ? "" : (m.seenBy && Array.isArray(m.seenBy) && m.seenBy.includes(other) ? "✔✔" : "✔");
+}
+function updateMsgTicks(el,m,my){
+  const meta = el.querySelector(".meta");
+  if(meta){ meta.innerText = `${m.sender===my ? "You" : (m.senderName || otherName)} • ${new Date(m.time).toLocaleTimeString()} ${getTicks(m,my)}`; }
+}
 
-/* ================= LONG PRESS MENU ================= */
-let activeMenu=null;
+/* ================= LONG PRESS / CONTEXT MENU ================= */
+let activeMenu = null;
 function enableMessageContext(el,msg){
-  let timer=null;
-  el.addEventListener("contextmenu",e=>{ e.preventDefault(); showMenu(e.clientX,e.clientY,msg); });
-  el.addEventListener("touchstart",e=>{ const t=e.touches[0]; timer=setTimeout(()=>showMenu(t.clientX,t.clientY,msg),600); });
-  ["touchend","touchmove","touchcancel"].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(timer)));
+  let timer = null;
+  el.addEventListener("contextmenu", e=>{
+    e.preventDefault();
+    showMenu(e.clientX, e.clientY, msg);
+  });
+  el.addEventListener("touchstart", e=>{
+    const t = e.touches[0];
+    timer = setTimeout(()=> showMenu(t.clientX, t.clientY, msg), 600);
+  });
+  ["touchend","touchmove","touchcancel"].forEach(ev=>el.addEventListener(ev, ()=>{ if(timer) clearTimeout(timer); timer=null; }));
 }
 function showMenu(x,y,msg){
   hideMenu();
-  const menu=document.createElement("div"); menu.className="ctxMenu"; menu.style.left=x+"px"; menu.style.top=y+"px";
-  const btnReply=document.createElement("div"); btnReply.className="ctxBtn reply"; btnReply.innerText="Reply"; btnReply.onclick=()=>{ hideMenu(); showReplyPreview(msg); };
-  const btnDelete=document.createElement("div"); btnDelete.className="ctxBtn delete"; btnDelete.innerText="Delete"; btnDelete.onclick=()=>{ hideMenu(); if(confirm("Delete this message?")) db.ref(`privateChats/${chatId}/messages/${msg.id}`).remove(); };
-  const btnCancel=document.createElement("div"); btnCancel.className="ctxBtn cancel"; btnCancel.innerText="Cancel"; btnCancel.onclick=hideMenu;
-  menu.appendChild(btnReply); menu.appendChild(btnDelete); menu.appendChild(btnCancel);
-  document.body.appendChild(menu); activeMenu=menu; window.addEventListener("click",hideMenu);
+  const menu = document.createElement("div");
+  menu.className = "ctxMenu";
+  menu.style.left = Math.max(8, x) + "px";
+  menu.style.top = Math.max(8, y) + "px";
+
+  const btnReply = document.createElement("div");
+  btnReply.className = "ctxBtn reply";
+  btnReply.innerText = "Reply";
+  btnReply.onclick = ()=>{ hideMenu(); showReplyPreview(msg); };
+
+  const btnDelete = document.createElement("div");
+  btnDelete.className = "ctxBtn delete";
+  btnDelete.innerText = "Delete";
+  btnDelete.onclick = ()=>{ hideMenu(); if(confirm("Delete this message?")) db.ref(`privateChats/${chatId}/messages/${msg.id}`).remove(); };
+
+  const btnCancel = document.createElement("div");
+  btnCancel.className = "ctxBtn cancel";
+  btnCancel.innerText = "Cancel";
+  btnCancel.onclick = hideMenu;
+
+  menu.appendChild(btnReply);
+  menu.appendChild(btnDelete);
+  menu.appendChild(btnCancel);
+
+  document.body.appendChild(menu);
+  activeMenu = menu;
+  // close on outside click
+  setTimeout(()=> window.addEventListener("click", hideMenu), 0);
 }
-function hideMenu(){ if(activeMenu){ activeMenu.remove(); activeMenu=null; window.removeEventListener("click",hideMenu); } }
+function hideMenu(){ if(activeMenu){ activeMenu.remove(); activeMenu=null; window.removeEventListener("click", hideMenu); } }
 
 /* ================= REPLY PREVIEW ================= */
-function showReplyPreview(msg){ replyTarget={id:msg.id,sender:msg.sender,senderName:msg.senderName||otherName,text:msg.text};
-  const holder=document.getElementById("replyPreviewHolder");
-  holder.innerHTML=`<div class="replyBar"><div class="replyBarText"><div style="font-weight:600;">Replying to ${replyTarget.sender===auth.currentUser.uid?"You":replyTarget.senderName}</div><div style="opacity:0.8;">${escapeHtml(msg.text)}</div></div><div class="cancelReplyBtn" onclick="hideReplyPreview()">✕</div></div>`;
+function showReplyPreview(msg){
+  replyTarget = { id: msg.id, sender: msg.sender, senderName: msg.senderName || otherName, text: msg.text };
+  const holder = document.getElementById("replyPreviewHolder");
+  const youOrName = (typeof auth.currentUser !== 'undefined' && auth.currentUser && replyTarget.sender === auth.currentUser.uid) ? "You" : escapeHtml(replyTarget.senderName);
+  holder.innerHTML = `<div class="replyBar"><div class="replyBarText"><div style="font-weight:600;">Replying to ${youOrName}</div><div style="opacity:0.8;">${escapeHtml(msg.text)}</div></div><div class="cancelReplyBtn" onclick="hideReplyPreview()">✕</div></div>`;
 }
-function hideReplyPreview(){ replyTarget=null; document.getElementById("replyPreviewHolder").innerHTML=""; }
+function hideReplyPreview(){
+  replyTarget = null;
+  document.getElementById("replyPreviewHolder").innerHTML = "";
+}
 
 /* ================= PRESENCE ================= */
 function initPresence(user){
-  const uid=user.uid;
-  const presenceRef=db.ref("presence/"+uid);
-  const connectedRef=db.ref(".info/connected");
-  connectedRef.on("value",snap=>{
-    if(snap.val()===true){
+  const uid = user.uid;
+  const presenceRef = db.ref("presence/"+uid);
+  const connectedRef = db.ref(".info/connected");
+  connectedRef.on("value", snap=>{
+    if(snap.val() === true){
       presenceRef.set({online:true,lastSeen:Date.now(),name:user.displayName||""});
       presenceRef.onDisconnect().set({online:false,lastSeen:Date.now(),name:user.displayName||""});
     }
   });
+  // update lastSeen every minute
   setInterval(()=>{ presenceRef.update({lastSeen:Date.now()}); },60000);
 }
 </script>
