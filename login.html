@@ -170,27 +170,42 @@ document.getElementById("forgotLink").addEventListener("click", async () => {
 });
 </script>
 <script>
-    const provider = new firebase.auth.GoogleAuthProvider();
+const provider = new firebase.auth.GoogleAuthProvider();
 
-    document.getElementById("googleSignIn").onclick = async () => {
-        try {
-            const result = await auth.signInWithPopup(provider);
-            const user = result.user;
+// Force popup + always ask user to choose account
+provider.setCustomParameters({ prompt: "select_account" });
 
-            // Save user to Realtime Database if new user
-            await db.ref("users/" + user.uid).update({
-                name: user.displayName,
-                email: user.email,
-                photo: user.photoURL,
-                lastLogin: Date.now()
-            });
+document.getElementById("googleSignIn").onclick = async () => {
+    try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
 
-            location.href = "members.html";
-        } catch (err) {
-            alert(err.message);
-        }
-    };
+        // If Google does not give photo, use fallback avatar
+        const finalPhoto = user.photoURL 
+            ? user.photoURL 
+            : "https://i.ibb.co/2k0Q6fB/default-user.png"; // your fallback SVG or PNG
+
+        // Save/update user in database
+        const userRef = db.ref("users/" + user.uid);
+
+        await userRef.update({
+            name: user.displayName || "Unknown User",
+            email: user.email,
+            photo: finalPhoto,
+            uid: user.uid,
+            provider: "google",
+            lastLogin: Date.now()
+        });
+
+        // Redirect
+        location.href = "members.html";
+
+    } catch (err) {
+        alert(err.message);
+    }
+};
 </script>
+
 
 </body>
 </html>

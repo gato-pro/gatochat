@@ -12,8 +12,18 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(
 .header{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(255,255,255,0.02)}
 .back{background:transparent;border:none;color:#9bd;cursor:pointer;font-size:18px}
 .otherPic{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#0b1220}
-.container{display:flex;flex-direction:column;height:calc(100dvh - 64px)}
-.messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+/* .container{display:flex;flex-direction:column;height:calc(100dvh - 64px)} */
+.container {display: flex;flex-direction: column;height: 100%;max-height: 100%;}
+/* .messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px} */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 0; /* ensure compose bar does not overlap */
+}
 .msg{max-width:75%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.04);position:relative;word-break:break-word}
 .msg.me{align-self:flex-end;background:linear-gradient(90deg,#090909,#070707);color:#fff}
 .meta{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
@@ -32,6 +42,30 @@ body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg1),var(
 .ctxBtn.delete{color:#ff6b6b}
 .ctxBtn.reply{color:var(--accent);font-weight:600}
 .smallNote{font-size:12px;color:var(--muted);padding:8px 12px}
+
+/* SCROLLBAR STYLES */
+
+@media (max-width: 1024px){
+  .wrap { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; max-height: none; }
+  .main { width: 100%; }
+}
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* Reply preview bar */
+.compose {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+.messages {
+  padding-bottom: 80px; /* space for input bar */
+}
+
+
 </style>
 </head>
 <body>
@@ -347,6 +381,48 @@ function initPresence(user){
   // update lastSeen every minute
   setInterval(()=>{ presenceRef.update({lastSeen:Date.now()}); },60000);
 }
+
+// ================= MOBILE INPUT STYLES =================
+// const input = document.getElementById("text");
+// const messagesEl = document.getElementById("messages");
+
+// input.addEventListener("focus", () => {
+//   setTimeout(() => { 
+//     input.scrollIntoView({behavior:"smooth", block:"end"}); 
+//   }, 300); // wait for keyboard to show
+// });
+
+// input.addEventListener("blur", () => {
+//   scrollToBottom();
+// });
+
+
+
 </script>
+
+<script>
+const compose = document.querySelector(".compose");
+const container = document.querySelector(".container");
+
+// Fix for mobile keyboards
+if (window.visualViewport) {
+  const updateBar = () => {
+    const viewport = window.visualViewport;
+    const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
+
+    if (bottomOffset > 0) {
+      // Keyboard opened → move input bar up
+      compose.style.bottom = bottomOffset + "px";
+    } else {
+      // Keyboard closed → reset
+      compose.style.bottom = "0px";
+    }
+  };
+
+  window.visualViewport.addEventListener("resize", updateBar);
+  window.visualViewport.addEventListener("scroll", updateBar);
+}
+</script>
+
 </body>
 </html>
