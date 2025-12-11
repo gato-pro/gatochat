@@ -274,9 +274,11 @@ search.addEventListener("input", () => {
 });
 
 // ---------- NAV ----------
-btnSignOut.onclick = async () => { await auth.signOut(); location.href="index.html"; }
-btnGlobal.onclick = () => { location.href="global.html"; }
-btnProfile.onclick = () => { location.href="profile.html"; }
+window.onload = () => {
+    if (btnSignOut) btnSignOut.onclick = async () => { await auth.signOut(); location.href="index.html"; }
+    if (btnGlobal) btnGlobal.onclick = () => { location.href="global.html"; }
+    if (btnProfile) btnProfile.onclick = () => { location.href="profile.html"; }
+};
 
 // ---------- PRESENCE ----------
 function initPresence(user){
@@ -375,5 +377,6 @@ async function loadAllUsers() {
 </script>
 </body>
 </html>
+
 
 
