@@ -300,8 +300,33 @@ document.getElementById("signOut").onclick = async () => {
     await auth.signOut();
     location.href = "index.html";
 };
+
+  // Presence helpers: ensure user is marked online while on this page
+function initPresence(user){
+    if (!user || !user.uid) return;
+    const uid = user.uid;
+    const presenceRef = db.ref('presence/' + uid);
+    const connectedRef = db.ref('.info/connected');
+
+    connectedRef.on('value', snap => {
+        if (snap.val() === true) {
+            // set online immediately
+            presenceRef.set({ online:true, lastSeen:Date.now(), name: user.displayName||'' }).catch(()=>{});
+            // ensure we set offline on disconnect
+            presenceRef.onDisconnect().set({ online:false, lastSeen:Date.now(), name: user.displayName||'' }).catch(()=>{});
+        }
+    });
+
+    // keep lastSeen updated every 30 seconds while the page is open
+    try{
+        setInterval(()=>{
+            presenceRef.update({ lastSeen: Date.now() }).catch(()=>{});
+        }, 30000);
+    }catch(e){/* ignore */}
+}
 </script>
 
 </body>
 </html>
+
 
