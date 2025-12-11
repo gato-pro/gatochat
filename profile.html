@@ -321,12 +321,13 @@ function initPresence(user){
     try{
         setInterval(()=>{
             presenceRef.update({ lastSeen: Date.now() }).catch(()=>{});
-        }, 30000);
+        }, 1000);
     }catch(e){/* ignore */}
 }
 </script>
 
 </body>
 </html>
+
 
 
