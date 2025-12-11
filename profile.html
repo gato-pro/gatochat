@@ -305,11 +305,34 @@ function initPresence(user){
     });
 
     // keep lastSeen updated every 30 seconds while the page is open
-    try{
-        setInterval(()=>{
-            presenceRef.update({ lastSeen: Date.now() }).catch(()=>{});
-        }, 1000);
-    }catch(e){/* ignore */}
+    // Presence: stable, no flicker, correct lastSeen handling
+function initPresence(user) {
+    if (!user || !user.uid) return;
+
+    const uid = user.uid;
+    const presenceRef = db.ref("presence/" + uid);
+    const connectedRef = db.ref(".info/connected");
+
+    connectedRef.on("value", snap => {
+        if (snap.val() === true) {
+
+            // Mark online with timestamp only ONCE when page connects
+            presenceRef.update({
+                online: true,
+                lastSeen: Date.now(),
+                name: user.displayName || ""
+            }).catch(()=>{});
+
+            // Setup clean disconnect handler with 2-second delay
+            const disconnectTime = Date.now();
+            presenceRef.onDisconnect().update({
+                online: false,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            }).catch(()=>{});
+        }
+    });
+}
+
 }
 
 /* Choose photo → open crop modal */
