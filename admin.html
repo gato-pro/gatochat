@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Panel — GatoChat</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --muted: #8b949e;
+  --primary: #2385f6;
+  --danger: #db3027;
+  --input-bg: #010409;
+  --scrollbar: #30363d;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  max-height: 100dvh;
+  max-width: 100dvw;
+  font-family: 'Inter', Arial, sans-serif;
+  background-color: var(--bg);
+  color: #c9d1d9;
+}
+a { color: var(--primary); text-decoration: none; }
+.wrap {
+  display: flex;
+  gap: 18px;
+  max-width: 1400px;
+  margin: 12px auto;
+  padding: 0 12px;
+}
+.sidebar {
+  flex: 0 0 280px;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+}
+h2, h3, h4 {
+  margin: 0 0 12px 0;
+  font-weight: 600;
+}
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1rem; }
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+input, select, textarea {
+  background: var(--input-bg);
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 10px;
+  border-radius: 8px;
+  width: 100%;
+}
+button {
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+button:hover {
+  opacity: 0.9;
+}
+.btnPrimary { background: var(--primary); color: #fff; }
+.btnDanger { background: var(--danger); color: #fff; }
+.small { font-size: 0.85rem; color: var(--muted); }
+.search { margin-bottom: 8px; }
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 70vh;
+  padding-right: 4px;
+}
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #0d1117;
+  transition: background 0.2s;
+}
+.userRow:hover { background: #161b22; }
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #010409;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-weight: 600;
+  color: #8b949e;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.userMeta {
+  flex: 1;
+  min-width: 0;
+}
+.metaTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.metaName {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metaSub {
+  font-size: 0.85rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.actions {
+  display: flex;
+  gap: 6px;
+}
+.msgList {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #010409;
+  padding: 10px;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.loginBox {
+  max-width: 400px;
+  margin: 60px auto;
+  background: var(--card);
+  padding: 20px;
+  border-radius: 12px;
+}
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+  padding: 10px 16px;
+  border-radius: 12px;
+  gap: 12px;
+}
+#viewBtn, #deleteBtn {
+  height: 1rem;
+  width: 2rem;
+  font-size: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  margin: 0;
+  position: relative;
+  left: 10px;
+}
+
+#viewBtn {
+  background-color: var(--primary);
+  color: white;
+}
+#deleteBtn {
+  background-color: var(--danger);
+  color: white;
+}
+
+#actionsDiv {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* CHAT ROWS */
+#userChats > div {
+  display: flex;
+  flex-wrap: wrap;           /* allow wrapping on small screens */
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 6px;                  /* spacing between items when wrapped */
+  background: rgba(255,255,255,0.03);
+  padding: 6px 10px;
+  border-radius: 8px;
+  word-break: break-word;     /* break long IDs */
+}
+
+/* CHAT ID TEXT */
+#userChats > div > #Open-DeleteDB {
+  flex: 1 1 auto;            /* text takes available space, can shrink */
+  min-width: 120px;          /* never go below readable width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;        /* single line with ellipsis if too long */
+}
+
+/* BUTTONS CONTAINER */
+#userChats > div > div {
+  display: flex;
+  flex-wrap: wrap;           /* wrap buttons if needed */
+  gap: 6px;
+}
+
+/* BUTTONS */
+#userChats button {
+  flex: 1 1 auto;            /* buttons shrink evenly */
+  min-width: 60px;           /* don't get too small */
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* SMALL SCREEN MEDIA QUERY */
+@media (max-width: 600px) {
+  #userChats > div {
+    flex-direction: column;  /* stack ID + buttons vertically */
+    align-items: flex-start;
+  }
+  #userChats > div > div {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  #userChats button {
+    width: auto;
+  }
+}
+
+
+/* TOP BAR */
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* allow wrapping on small screens */
+  gap: 12px;
+  padding: 10px 18px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+}
+
+/* Left section (title + email) */
+.topBar > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto; /* allow to grow/shrink */
+  min-width: 180px;
+}
+
+/* Right section (search + sign out) */
+.topBar > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  flex-wrap: wrap; /* wrap input + button on small screens */
+  justify-content: flex-end;
+}
+
+/* SEARCH INPUT */
+#globalFilter {
+  flex: 1 1 180px;  /* grow and shrink as needed */
+  min-width: 120px;  /* prevent it from getting too small */
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  font-size: 14px;
+}
+
+/* SIGN OUT BUTTON */
+#btnSignOutAdmin {
+  flex: 0 0 auto; /* do not shrink */
+}
+
+/* MEDIA QUERY FOR VERY SMALL SCREENS */
+@media (max-width: 500px) {
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .topBar > div:last-child {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  #globalFilter {
+    width: 100%; /* take full width under 500px */
+  }
+  #btnSignOutAdmin {
+    width: 100%;
+  }
+}
+/* SCROLLBAR STYLES */
+
+@media (max-width: 1024px){
+  .wrap { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; max-height: none; }
+  .main { width: 100%; }
+}
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<div id="loginView" style="display:none">
+  <div class="loginBox">
+    <h2>Admin Sign in</h2>
+    <div class="field"><label>Email</label><input id="adminEmail" placeholder="admin@example.com"></div>
+    <div class="field"><label>Password</label><input id="adminPassword" type="password" placeholder="password"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="btnAdminSignIn" class="btn btnPrimary">Sign in</button>
+      <button id="btnBackToSite" class="btn">Back</button>
+    </div>
+    <p class="small" style="margin-top:10px">This panel authenticates using Firebase Email/Password. Use the admin account you configured.</p>
+  </div>
+</div>
+
+<div id="appView" style="display:none">
+  <div class="topBar">
+    <div style="display:flex;gap:12px;align-items:center">
+      <strong>GatoChat — Admin Panel</strong>
+      <span class="small" id="signedInAs"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="globalFilter" class="search" placeholder="Search users or UID..." style="width:280px">
+      <button id="btnSignOutAdmin" class="btn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="sidebar">
+      <div class="panel" id="usersPanel">
+        <h3>Users</h3>
+        <input id="userSearch" class="search" placeholder="Search by name or UID">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="btnRefreshUsers" class="btn">Refresh</button>
+          <button id="btnCreateUser" class="btn btnPrimary">Create user</button>
+        </div>
+        <div class="userList" id="userList"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Global chat</h3>
+        <div class="field"><label>Last 100 global messages</label></div>
+        <div class="msgList" id="globalMsgs"></div>
+        <div style="margin-top:8px"><button id="btnDeleteAllGlobal" class="btn btnDanger">Delete all global messages</button></div>
+      </div>
+
+      <div class="panel">
+        <h3>Quick actions</h3>
+        <div class="field"><label>ImgBB API Key</label><input id="imgbbKey" placeholder="paste imgbb key here"></div>
+        <div style="display:flex;gap:8px">
+          <button id="btnExportUsers" class="btn">Export users JSON</button>
+          <button id="btnImportUsers" class="btn">Import users JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div id="userPanel" class="panel">
+        <h3>User details</h3>
+        <div id="noUser" class="small">Select a user from the left to view/edit details.</div>
+        <div id="userForm" style="display:none">
+          <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <div class="avatar" id="userAvatar" style="font-size:24px;"><img src="" alt="" id="userAvatarImg"></div>
+            <div style="flex:1;min-width:200px">
+              <div class="field"><label>UID</label><input id="u_uid" readonly></div>
+              <div class="field"><label>Display name</label><input id="u_name"></div>
+              <div class="field"><label>Email (stored in DB)</label><input id="u_email"></div>
+              <div class="field"><label>Photo URL</label><input id="u_photo"></div>
+            </div>
+            <div style="min-width:160px">
+              <div class="field"><label>Upload photo</label><input id="u_file" type="file" accept="image/*"></div>
+              <div style="display:flex;gap:6px;margin-top:6px"><button id="btnSaveUser" class="btn btnPrimary">Save</button><button id="btnDeleteUser" class="btn btnDanger">Delete DB</button></div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <h4>User data snapshot</h4>
+            <pre id="userJson"></pre>
+          </div>
+
+          <div style="margin-top:16px" >
+            <h4>Private chats</h4>
+            <div id="userChats"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Logs</h3>
+        <div id="logArea" style="max-height:220px;overflow:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script>
+/* ============ CONFIG ============ */
+/* Replace with your project config */
+const firebaseConfig = {
+  apiKey: "AIzaSyBdhQFVF0PTZMw0DXT5zBLpxndw_HNSv5U",
+  authDomain: "gatochat-56ab6.firebaseapp.com",
+  databaseURL: "https://gatochat-56ab6-default-rtdb.firebaseio.com",
+  projectId: "gatochat-56ab6",
+  storageBucket: "gatochat-56ab6.firebasestorage.app",
+  messagingSenderId: "888124564246",
+  appId: "1:888124564246:web:33a41ee68eec0f6b9c2637"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+/* ADMIN: set the email that is allowed to use this panel.
+   You must sign into this Firebase project with that email/password.
+   Server-side enforcement recommended for production. */
+const ADMIN_EMAIL = "azuredawn78@gmail.com"; // <- replace with your admin email
+/* You can instead leave ADMIN_EMAIL empty to permit any signed-in user (NOT RECOMMENDED) */
+
+/* Default imgbb key (optional) */
+let IMGBB_KEY = "9de61cf69da55fffd9fc05998c9acadd";
+
+const $ = id => document.getElementById(id);
+
+/* ============ UI refs ============ */
+const loginView = $('loginView');
+const appView = $('appView');
+const signedInAs = $('signedInAs');
+const adminEmailInput = $('adminEmail');
+const adminPasswordInput = $('adminPassword');
+const btnSignIn = $('btnAdminSignIn');
+const btnBackToSite = $('btnBackToSite');
+
+const userList = $('userList');
+const userSearch = $('userSearch');
+const btnRefreshUsers = $('btnRefreshUsers');
+const btnCreateUser = $('btnCreateUser');
+const imgbbKeyEl = $('imgbbKey');
+const btnExportUsers = $('btnExportUsers');
+const btnImportUsers = $('btnImportUsers');
+
+const userForm = $('userForm');
+const noUser = $('noUser');
+const u_uid = $('u_uid');
+const u_name = $('u_name');
+const u_email = $('u_email');
+const u_photo = $('u_photo');
+const u_file = $('u_file');
+const userAvatarImg = $('userAvatarImg');
+const userJson = $('userJson');
+const userChats = $('userChats');
+const btnSaveUser = $('btnSaveUser');
+const btnDeleteUser = $('btnDeleteUser');
+
+const globalMsgsEl = $('globalMsgs');
+const btnDeleteAllGlobal = $('btnDeleteAllGlobal');
+
+const btnSignOutAdmin = $('btnSignOutAdmin');
+const globalFilter = $('globalFilter');
+
+const logArea = $('logArea');
+
+let currentAdmin = null;
+let usersCache = {}; // uid -> data
+let selectedUser = null;
+
+/* ============ UTIL ============ */
+function log(msg, level='info'){
+  const t = new Date().toLocaleTimeString();
+  const row = document.createElement('div');
+  row.textContent = `[${t}] ${msg}`;
+  logArea.prepend(row);
+  console[level === 'error' ? 'error' : 'log'](msg);
+}
+
+function showLogin(){
+  loginView.style.display='block';
+  appView.style.display='none';
+}
+function showApp(){
+  loginView.style.display='none';
+  appView.style.display='block';
+}
+
+/* ============ AUTH ============ */
+// Show login screen initially
+showLogin();
+
+// back button (just goes to site home)
+btnBackToSite.onclick = () => location.href = 'index.html';
+
+// Sign in
+btnSignIn.onclick = async () => {
+  const em = adminEmailInput.value.trim();
+  const pw = adminPasswordInput.value;
+  if(!em || !pw) return alert('enter email + password');
+  try{
+    const res = await auth.signInWithEmailAndPassword(em,pw);
+    currentAdmin = res.user;
+    if (ADMIN_EMAIL && currentAdmin.email !== ADMIN_EMAIL) {
+      auth.signOut();
+      return alert('This account is not allowed to access admin panel.');
+    }
+    signedInAs.innerText = `Signed in as ${currentAdmin.email}`;
+    IMGBB_KEY = imgbbKeyEl.value.trim() || IMGBB_KEY;
+    initApp();
+    showApp();
+  }catch(err){
+    console.error(err);
+    alert('Sign-in failed: ' + (err.message || err));
+  }
+};
+
+// sign out
+btnSignOutAdmin.onclick = async () => {
+  await auth.signOut();
+  location.reload();
+};
+
+/* If user is already signed in, show app */
+auth.onAuthStateChanged(user => {
+  if(user){
+    currentAdmin = user;
+    if (ADMIN_EMAIL && user.email !== ADMIN_EMAIL) {
+      // if someone else signed in, force login screen
+      auth.signOut();
+      showLogin();
+      return;
+    }
+    signedInAs.innerText = `Signed in as ${user.email}`;
+    IMGBB_KEY = imgbbKeyEl.value.trim() || IMGBB_KEY;
+    initApp();
+    showApp();
+  } else {
+    showLogin();
+  }
+});
+
+/* ============ APP ============ */
+async function initApp(){
+  log('Initializing admin app...');
+  // load users once and subscribe to changes
+  db.ref('users').on('value', snap => {
+    usersCache = snap.val() || {};
+    renderUsersList(usersCache);
+  });
+
+  // load global messages
+  loadGlobalMessages();
+
+  // UI wiring
+  btnRefreshUsers.onclick = () => { db.ref('users').once('value').then(s=>{ usersCache = s.val()||{}; renderUsersList(usersCache); log('Refreshed users'); }); };
+  btnCreateUser.onclick = createUserPrompt;
+  userSearch.oninput = () => renderUsersList(usersCache);
+  globalFilter.oninput = () => renderUsersList(usersCache);
+  btnDeleteAllGlobal.onclick = deleteAllGlobalConfirm;
+  btnExportUsers.onclick = exportUsersJson;
+  btnImportUsers.onclick = importUsersJson;
+  imgbbKeyEl.onchange = () => { IMGBB_KEY = imgbbKeyEl.value.trim(); };
+
+  // create/import hooks
+  $('btnExportUsers').onclick = exportUsersJson;
+  $('btnImportUsers').onclick = () => {
+    const json = prompt('Paste users JSON to import (will overwrite existing users nodes if UID matches).');
+    if(!json) return;
+    try{
+      const obj = JSON.parse(json);
+      if(typeof obj !== 'object') throw new Error('Invalid JSON');
+      if(!confirm('Continue? This will overwrite matching users entries in DB.')) return;
+      db.ref('users').update(obj).then(()=>alert('Imported'));
+    }catch(err){ alert('Invalid JSON'); console.error(err); }
+  };
+}
+
+/* ============ USERS LIST ============ */
+function renderUsersList(users){
+  userList.innerHTML = '';
+  const q = (userSearch.value || globalFilter.value || '').toLowerCase();
+
+  // build array of entries with lastTime (we'll query last message timestamp)
+  const rows = Object.keys(users || {}).map(uid => {
+    const u = users[uid] || {};
+    return { uid, name: u.name || 'Unknown', photo: u.photo || '', email: u.email || '', createdAt: u.createdAt || null, raw: u };
+  });
+
+  // optionally, if you have cached lastTime in users node, use it for sorting; else default to alphabetical
+  rows.sort((a,b)=>{
+    const aTime = (a.raw && a.raw._lastTime) || 0;
+    const bTime = (b.raw && b.raw._lastTime) || 0;
+    if(aTime !== bTime) return bTime - aTime;
+    return a.name.localeCompare(b.name);
+  });
+
+  rows.forEach(r=>{
+    if(q){
+      if(!r.uid.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q) && !(r.email||'').toLowerCase().includes(q)) return;
+    }
+    const div = document.createElement('div');
+    div.className = 'userRow';
+    div.innerHTML = `
+      <div class="avatar">${ r.photo ? `<img src="${r.photo}">` : (r.name[0]||'?') }</div>
+      <div class="userMeta">
+        <div class="metaTop"><div class="metaName">${escapeHtml(r.name)}</div><div class="small">${r.uid}</div></div>
+        <div class="metaSub">${escapeHtml(r.email||'')}</div>
+      </div>
+      <div class="actions" id="actionsDiv">
+        <button id="viewBtn" class="btn" data-uid="${r.uid}" data-act="view">View</button>
+        <button id="deleteBtn" class="btn" data-uid="${r.uid}" data-act="delete">Del</button>
+      </div>
+    `;
+    userList.appendChild(div);
+
+    div.querySelector('[data-act="view"]').onclick = () => selectUser(r.uid);
+    div.querySelector('[data-act="delete"]').onclick = () => deleteUserDbConfirm(r.uid);
+  });
+
+  log(`Users rendered: ${Object.keys(users||{}).length}`);
+}
+
+/* ============ SELECT / EDIT USER ============ */
+async function selectUser(uid){
+  selectedUser = uid;
+  const data = usersCache[uid] || {};
+  if(!data) return alert('No data for user');
+
+  noUser.style.display='none';
+  userForm.style.display='block';
+
+  u_uid.value = uid;
+  u_name.value = data.name || '';
+  u_email.value = data.email || '';
+  u_photo.value = data.photo || '';
+  userAvatarImg.src = data.photo || 'https://via.placeholder.com/300x300?text=Avatar';
+  userJson.textContent = JSON.stringify(data, null, 2);
+
+  // load user's chats (look in privateChats by scanning chatMembers)
+  userChats.innerHTML = 'Loading chats...';
+  const chatsFound = [];
+  // naive scan: get all chatMembers and find chatIds that include uid
+  db.ref('chatMembers').once('value').then(s=>{
+    const cm = s.val() || {};
+    Object.keys(cm).forEach(chatId=>{
+      if(cm[chatId] && cm[chatId][uid]) chatsFound.push(chatId);
+    });
+    if(chatsFound.length===0){
+      userChats.innerHTML = '<div class="small">No chats found for this user in chatMembers.</div>';
+      return;
+    }
+    // render chats
+    userChats.innerHTML = '';
+    chatsFound.forEach(cid=>{
+      const el = document.createElement('div');
+      el.style.display='flex'; el.style.justifyContent='space-between'; el.style.alignItems='center';
+      el.style.marginBottom='6px';
+      el.innerHTML = `<div class="small" id="Open-DeleteDB">${cid}</div><div><button class="btn" data-c="${cid}">Open</button><button class="btn btnDanger" data-del="${cid}">Delete DB</button></div>`;
+      userChats.appendChild(el);
+      el.querySelector('[data-c]').onclick = () => { window.open(`chat.html?chatId=${cid}&other=${uid}`, '_blank'); };
+      el.querySelector('[data-del]').onclick = () => {
+        if(!confirm('Delete chat DB (privateChats and chatMembers) for ' + cid + '? This is irreversible.')) return;
+        db.ref('privateChats/'+cid).remove();
+        db.ref('chatMembers/'+cid).remove();
+        alert('Deleted chat DB: ' + cid);
+      };
+    });
+  });
+}
+
+/* Save user edits (only updates users/{uid} node and not Firebase Auth account) */
+btnSaveUser.onclick = async () => {
+  if(!selectedUser) return alert('Select a user first');
+  const uid = selectedUser;
+  const updates = {};
+  updates['users/' + uid + '/name'] = u_name.value.trim();
+  updates['users/' + uid + '/email'] = u_email.value.trim();
+  updates['users/' + uid + '/photo'] = u_photo.value.trim();
+
+  try{
+    await db.ref().update(updates);
+    alert('Saved user data to DB.');
+  }catch(err){
+    console.error(err); alert('Save failed: '+err.message);
+  }
+};
+
+/* Upload selected file to ImgBB and auto-fill u_photo */
+u_file.onchange = async (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  if(!IMGBB_KEY) {
+    alert('Paste your ImgBB key in the left Imgbb API Key field first.');
+    return;
+  }
+  try {
+    const url = await uploadToImgBB(f);
+    u_photo.value = url;
+    userAvatarImg.src = url;
+    alert('Uploaded to ImgBB. Click Save to persist the photo URL to user.');
+  } catch(err){
+    console.error(err);
+    alert('Upload failed: ' + err.message);
+  }
+};
+
+/* ============ UPLOAD to ImgBB ============ */
+async function uploadToImgBB(file){
+  const form = new FormData();
+  form.append('image', file);
+  const res = await fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_KEY, { method:'POST', body: form });
+  const j = await res.json();
+  if(!j || !j.success) throw new Error((j && j.error && j.error.message) || 'ImgBB upload failed');
+  return j.data.url;
+}
+
+/* ============ DELETE USER (DB only) ============ */
+async function deleteUserDbConfirm(uid){
+  if(!confirm('Delete USER DB for ' + uid + '? This will remove users/{uid}, presence/{uid}, and attempt to remove related chats data.')) return;
+  try {
+    // remove users node and presence
+    await db.ref('users/'+uid).remove();
+    await db.ref('presence/'+uid).remove();
+    // remove chatMembers entries where this uid is present (scan)
+    const cmSnap = await db.ref('chatMembers').once('value');
+    const cm = cmSnap.val() || {};
+    const toRemove = [];
+    Object.keys(cm).forEach(chatId => {
+      if(cm[chatId] && cm[chatId][uid]) {
+        // remove the member and if chat becomes empty, remove chatMembers & privateChats
+        db.ref('chatMembers/'+chatId+'/'+uid).remove();
+        // check if empty now (async)
+        db.ref('chatMembers/'+chatId).once('value').then(s=>{
+          const val = s.val() || {};
+          if(Object.keys(val).length === 0) {
+            db.ref('chatMembers/'+chatId).remove();
+            db.ref('privateChats/'+chatId).remove();
+          }
+        });
+      }
+    });
+    alert('User DB and presence removed. Note: Firebase Auth account remains (not deleted).');
+  } catch(err){ console.error(err); alert('Delete failed: '+err.message); }
+}
+
+/* ============ CREATE USER (DB only) ============ */
+async function createUserPrompt(){
+  const name = prompt('Display name for new user:');
+  if(!name) return;
+  const email = prompt('Email to store in DB (optional):');
+  // generate a uid-like key (not creating Firebase Auth account)
+  const uid = 'u_' + Math.random().toString(36).slice(2,10);
+  const payload = { name, email: email||'', createdAt: Date.now() };
+  await db.ref('users/'+uid).set(payload);
+  alert('Created DB user with uid: '+uid + '. This is DB-only user (no Firebase Auth account).');
+}
+
+/* ============ GLOBAL MESSAGES ============ */
+async function loadGlobalMessages(){
+  globalMsgsEl.innerHTML = 'Loading...';
+  const snap = await db.ref('global/messages').orderByChild('time').limitToLast(100).once('value');
+  const arr = [];
+  snap.forEach(c => { const v = c.val(); v.id = c.key; arr.push(v); });
+  // show newest first
+  arr.sort((a,b)=> (b.time||0) - (a.time||0));
+  globalMsgsEl.innerHTML = '';
+  arr.forEach(m=>{
+    const el = document.createElement('div');
+    el.style.display='flex'; el.style.justifyContent='space-between'; el.style.alignItems='center';
+    el.style.background='linear-gradient(180deg,rgba(255,255,255,0.01),transparent)'; el.style.padding='8px'; el.style.borderRadius='8px';
+    el.innerHTML = `<div style="max-width:70%"><div style="font-weight:600">${escapeHtml(m.name||m.uid||'User')}</div><div class="small">${escapeHtml(m.text||'')}</div></div><div style="display:flex;flex-direction:column;gap:6px"><div class="small">${new Date(m.time||0).toLocaleString()}</div><div><button class="btn" data-id="${m.id}">Delete</button></div></div>`;
+    globalMsgsEl.appendChild(el);
+    el.querySelector('button').onclick = async ()=>{
+      if(!confirm('Delete this global message?')) return;
+      await db.ref('global/messages/'+m.id).remove();
+      el.remove();
+    };
+  });
+}
+
+/* delete all (danger) */
+async function deleteAllGlobalConfirm(){
+  if(!confirm('Delete ALL global messages? This is irreversible.')) return;
+  try {
+    await db.ref('global/messages').remove();
+    globalMsgsEl.innerHTML = '';
+    alert('Deleted all global messages.');
+  }catch(err){ alert('Failed: '+err.message); }
+}
+
+/* ============ EXPORT / IMPORT ============ */
+function exportUsersJson(){
+  const json = JSON.stringify(usersCache, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'users.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* import handled earlier */
+
+// small helpers
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ EXTRA: load last message preview helper (optional) ============ */
+function loadLastMessage(uid, previewEl, rec){
+  if(!previewEl) return;
+  previewEl.textContent = 'Loading...';
+  const me = currentAdmin && currentAdmin.uid;
+  if(!me) { previewEl.textContent = '—'; return; }
+
+  const chatId = (me < uid) ? `${me}_${uid}` : `${uid}_${me}`;
+  db.ref(`privateChats/${chatId}/messages`).orderByChild('time').limitToLast(1).once('value').then(s=>{
+    if(!s.exists()){ previewEl.textContent = 'No messages yet'; return; }
+    let last = null;
+    s.forEach(c=> last = { id:c.key, ...c.val() });
+    if(last){
+      previewEl.textContent = (last.text||'').slice(0,60);
+      if(rec) rec.lastTime = last.time || 0;
+    } else previewEl.textContent = 'No messages yet';
+  }).catch(e=>{
+    previewEl.textContent = 'Error';
+    console.warn('preview error', e);
+  });
+}
+
+</script>
+</body>
+</html>
