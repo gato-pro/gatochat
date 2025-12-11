@@ -693,11 +693,37 @@ try{
   Object.keys(lc).forEach(url => preloadImage(url));
 }catch(e){}
 
-/* ================= END OF SCRIPT ================= */
+/* ================= scroll screen when upload image ================= */
+function addMessageToChat(msg) {
+    const box = document.querySelector(".messages");
+
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + (msg.uid === auth.currentUser.uid ? "me" : "");
+
+    // image?
+    if (msg.imageUrl) {
+        const img = document.createElement("img");
+        img.src = msg.imageUrl;
+        img.className = "chat-image";
+        wrap.appendChild(img);
+
+        img.onload = () => scrollToBottom();  // FIX for image scroll
+    } 
+    
+    // text?
+    if (msg.text) {
+        wrap.appendChild(document.createTextNode(msg.text));
+    }
+
+    box.appendChild(wrap);
+
+    scrollToBottom();  // fallback
+}
 
 
 </script>
 
 </body>
 </html>
+
 
