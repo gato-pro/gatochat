@@ -123,8 +123,9 @@ html, body {
 }
 
   /* css for mobile keyboard and inputbar compose */
-  .compose {
+.compose {
   position: fixed;
+  bottom: 1rem; /* desktop stays correct */
   left: 0;
   right: 0;
 }
@@ -686,7 +687,9 @@ viewer.addEventListener("click", e=>{ if(e.target === viewer) closeImageViewer()
 /* ================= MOBILE INPUT FIX FOR KEYBOARD (keeps compose visible) ================= */
 const compose = document.querySelector(".compose");
 
-if (window.visualViewport) {
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+if (isMobile && window.visualViewport) {
   const updateBar = () => {
     const vv = window.visualViewport;
     const keyboardHeight =
@@ -695,13 +698,13 @@ if (window.visualViewport) {
     compose.style.bottom =
       (keyboardHeight > 0 ? keyboardHeight : 0) + "px";
 
-    // 👇 THIS is the important part
     compose.style.marginBottom = "1rem";
   };
 
   window.visualViewport.addEventListener("resize", updateBar);
   window.visualViewport.addEventListener("scroll", updateBar);
 }
+
 
 
 
@@ -743,6 +746,7 @@ function addMessageToChat(msg) {
 
 </body>
 </html>
+
 
 
 
