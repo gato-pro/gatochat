@@ -677,15 +677,27 @@ viewer.addEventListener("click", e=>{ if(e.target === viewer) closeImageViewer()
 
 /* ================= MOBILE INPUT FIX FOR KEYBOARD (keeps compose visible) ================= */
 const compose = document.querySelector(".compose");
+
 if (window.visualViewport) {
   const updateBar = () => {
     const viewport = window.visualViewport;
-    const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
-    compose.style.bottom = (bottomOffset > 0 ? bottomOffset + "px" : "0px");
+
+    const bottomOffset =
+      window.innerHeight - viewport.height - viewport.offsetTop;
+
+    // convert 1rem to pixels
+    const oneRem = parseFloat(
+      getComputedStyle(document.documentElement).fontSize
+    );
+
+    compose.style.bottom =
+      (bottomOffset > 0 ? bottomOffset : 0) + oneRem + "px";
   };
+
   window.visualViewport.addEventListener("resize", updateBar);
   window.visualViewport.addEventListener("scroll", updateBar);
 }
+
 
 /* ================= INITIAL LOCAL CACHING SETUP ================= */
 try{
@@ -725,6 +737,7 @@ function addMessageToChat(msg) {
 
 </body>
 </html>
+
 
 
 
