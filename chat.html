@@ -122,6 +122,14 @@ html, body {
   scroll-behavior: smooth;
 }
 
+  /* css for mobile keyboard and inputbar compose */
+  .compose {
+  position: fixed;
+  left: 0;
+  right: 0;
+}
+
+
 
 </style>
 </head>
@@ -680,23 +688,21 @@ const compose = document.querySelector(".compose");
 
 if (window.visualViewport) {
   const updateBar = () => {
-    const viewport = window.visualViewport;
-
-    const bottomOffset =
-      window.innerHeight - viewport.height - viewport.offsetTop;
-
-    // convert 1rem to pixels
-    const oneRem = parseFloat(
-      getComputedStyle(document.documentElement).fontSize
-    );
+    const vv = window.visualViewport;
+    const keyboardHeight =
+      window.innerHeight - vv.height - vv.offsetTop;
 
     compose.style.bottom =
-      (bottomOffset > 0 ? bottomOffset : 0) + oneRem + "px";
+      (keyboardHeight > 0 ? keyboardHeight : 0) + "px";
+
+    // 👇 THIS is the important part
+    compose.style.marginBottom = "1rem";
   };
 
   window.visualViewport.addEventListener("resize", updateBar);
   window.visualViewport.addEventListener("scroll", updateBar);
 }
+
 
 
 /* ================= INITIAL LOCAL CACHING SETUP ================= */
@@ -737,6 +743,7 @@ function addMessageToChat(msg) {
 
 </body>
 </html>
+
 
 
 
